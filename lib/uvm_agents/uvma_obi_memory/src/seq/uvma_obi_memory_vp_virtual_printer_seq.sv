@@ -26,7 +26,7 @@
  */
 class uvma_obi_memory_vp_virtual_printer_seq_c extends uvma_obi_memory_vp_base_seq_c;
 
-   localparam NUM_WORDS = 11;
+   localparam NUM_WORDS = 2;
 
    `uvm_object_utils_begin(uvma_obi_memory_vp_virtual_printer_seq_c)
    `uvm_object_utils_end
