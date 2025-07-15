@@ -6,4 +6,4 @@
 	url = git@github.com:synthara/cv32e20-dv-v2.git
 [submodule "riscv-opcodes"]
 	path = riscv-opcodes
-	url = git@github.com:riscv/riscv-opcodes.git
+	url = git@github.com:synthara/riscv-opcodes.git
