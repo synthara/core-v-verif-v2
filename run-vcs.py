@@ -516,11 +516,14 @@ if __name__ == "__main__":
     
     parse_cmd = fmt.parse_cmd.format(**fmt_dict)
 
+    autogen_cmd = fmt.autogen_cmd.format(**fmt_dict)
+
     sw_cmd_dict = {
         "rtl_git_cmd": rtl_git_cmd,
         "tb_git_cmd": tb_git_cmd,
         "bsp_compile_cmd": bsp_compile_cmd,
-        "parse_cmd": parse_cmd
+        "parse_cmd": parse_cmd,
+        "autogen_cmd": autogen_cmd
     }
 
     ###################################################################

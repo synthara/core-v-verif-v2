@@ -83,6 +83,10 @@ parse_cmd = """
 cd {RISCV_OPCODES_DIR} && python parse.py -sverilog {ext_supported}
 """
 
+autogen_cmd = """
+cd {RISCV_OPCODES_DIR} && python decoder_autogen.py
+"""
+
 dpi_compile_cmd = """
 cd {csrc_dir} && 
 {GCC} -w -pipe -DVCSMX -DUVM_DPI_DO_TYPE_CHECK -DVCSMX -DUVM_DPI_DO_TYPE_CHECK -fPIC -O -I{VCS_HOME}/include -c {VCS_HOME}/etc/uvm-1.2/dpi/uvm_dpi.cc && \
