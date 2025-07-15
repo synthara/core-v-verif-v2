@@ -16,6 +16,12 @@ TB_COP_COMMIT = "313a9de49b82b4375a1edeedb80bb12ee47e4993"
 # Commit on branch feature/interrupts
 TB_BASE_COMMIT = "29e5f2e5e1bf6a4662149884f0e412224d5b9258"
 
+allowed_tests = [
+    "uvmt_cv32e20_firmware_test_c",
+    "uvmt_cv32e20_model_test_c",
+    "uvmt_cv32e20_model_test_dual_ref_c"
+]
+
 allowed_marches = [
     "rv32imc_zicsr",
     "rv32imc",
@@ -59,8 +65,8 @@ parser.add_argument(
 parser.add_argument("-mem_dump", help="Dump the memory content", action="store_true")
 parser.add_argument(
     "-test",
-    help="Select the UVM test",
-    default="uvmt_cv32e20_firmware_test_c",
+    help=f"Select the UVM test, default is {allowed_tests[0]}, allowed are {allowed_tests}",
+    default=allowed_tests[0],
 )
 parser.add_argument(
     "-ld",
