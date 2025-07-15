@@ -2,7 +2,7 @@
     "name": "uvmc_rvfi_decoder_model",
     "parent": "null",
     "main_class": "uvmc_rvfi_reference_model#(32, 32)",
-    "instr_width": "31",
+    "instr_width": "32",
     "path_name": "file_path",
     "ext_supported": ["rv_i", "rv_c", "rv_m", "rv32_c", "rv32_i", "rv_zicsr", "unratified/rv_addsub", "unratified/rv_addsubls3", "unratified/rv_clip", "unratified/rv_cmpsimd", "rv_system", "unratified/rv_dotpsimd", "unratified/rv_gen_alu", "unratified/rv_gensimd", "unratified/rv_mac32", "unratified/rv_mac168", "unratified/rv_mul168", "unratified/rv_postinc_load_store"]
 }
