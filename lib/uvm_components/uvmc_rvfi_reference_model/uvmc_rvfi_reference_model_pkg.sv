@@ -33,6 +33,7 @@ package uvmc_rvfi_reference_model_pkg;
   `include "uvma_rvfi_tdefs.sv"
   `include "uvmc_rvfi_reference_model_utils.sv"
   `include "uvmc_rvfi_reference_model.sv"
+  `include "uvmc_rvfi_decoder_model.sv"
   `include "rvfi_spike.sv"
   `include "uvmc_rvfi_spike.sv"
 

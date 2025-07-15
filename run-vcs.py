@@ -9,12 +9,12 @@ from util import fmt
 # Commit on branch feature/ssr
 RTL_COP_COMMIT = "d78b02907a7358889814a9fd428d38a8154b318d"
 # Commit on branch feature/rvfi_interrupts
-RTL_BASE_COMMIT = "e027937aef36f95723b05f19eecdd2f567495e57"
+RTL_BASE_COMMIT = "370793f52488d1022d0554d194ad24f125156acc"
 
 # Commit on branch test_cv_instr
 TB_COP_COMMIT = "313a9de49b82b4375a1edeedb80bb12ee47e4993"
 # Commit on branch feature/interrupts
-TB_BASE_COMMIT = "e892f368f831b0df7d5da00a93c5ef6d5b7998cc"
+TB_BASE_COMMIT = "29e5f2e5e1bf6a4662149884f0e412224d5b9258"
 
 allowed_marches = [
     "rv32imc_zicsr",
@@ -517,8 +517,8 @@ if __name__ == "__main__":
     parse_cmd = fmt.parse_cmd.format(**fmt_dict)
 
     sw_cmd_dict = {
-        # "rtl_git_cmd": rtl_git_cmd,
-        # "tb_git_cmd": tb_git_cmd,
+        "rtl_git_cmd": rtl_git_cmd,
+        "tb_git_cmd": tb_git_cmd,
         "bsp_compile_cmd": bsp_compile_cmd,
         "parse_cmd": parse_cmd
     }
