@@ -6,13 +6,13 @@ import subprocess
 import json
 from util import fmt
 
-# Commit on branch feature/ssr
-RTL_COP_COMMIT = "d78b02907a7358889814a9fd428d38a8154b318d"
-# Commit on branch feature/rvfi_interrupts
-RTL_BASE_COMMIT = "370793f52488d1022d0554d194ad24f125156acc"
+# Commit on branch feature/fdm_dev_tristan
+RTL_COP_COMMIT = "642907fdbc57e7bd7230feece89e86f0c98f8b6f"
+# Commit on branch feature/rvfi_improvements
+RTL_BASE_COMMIT = "e027937aef36f95723b05f19eecdd2f567495e57"
 
 # Commit on branch test_cv_instr
-TB_COP_COMMIT = "313a9de49b82b4375a1edeedb80bb12ee47e4993"
+TB_COP_COMMIT = "29e5f2e5e1bf6a4662149884f0e412224d5b9258"
 # Commit on branch feature/interrupts
 TB_BASE_COMMIT = "29e5f2e5e1bf6a4662149884f0e412224d5b9258"
 
@@ -150,6 +150,7 @@ if __name__ == "__main__":
     VERILAB_DIR = f"{CORE_TB_PATH}/vendor_lib/verilab/svlib"
     RISCV_OPCODES_DIR = f"{CORE_V_VERIF}/riscv-opcodes"
     RISCV_OPCODES_CONFIG_PATH = f"{CORE_V_VERIF}/util/config.json"
+    DV_UVMC_RVFI_REFERENCE_MODEL_PATH = f"{CORE_V_VERIF}/lib/uvm_components/uvmc_rvfi_reference_model"
 
     os.environ["CORE_V_VERIF"] = CORE_V_VERIF
     os.environ["CORE_RTL_PATH"] = CORE_RTL_PATH
@@ -335,14 +336,14 @@ if __name__ == "__main__":
     args_define = f"+define+{args.define}"
     vcs_compile_flags = "+define++define+CV32E20_RVFI+RVFI +define+CV32E20_TRACE_EXECUTION +USE_ISS -lca -sverilog +define+CV32E20_ASSERT_ON -ntb_opts uvm-1.2 -timescale=1ns/1ps -assert svaext -race=all -ignore unique_checks -full64 -reportstats -notice -line -fgp=multisocket +define+UVM"
 
-            # Trova il percorso assoluto del file inst.sverilog
-    inst_file_path = os.path.abspath(os.path.join(CORE_V_VERIF,"riscv-opcodes", "inst.sverilog"))
+    # Find absolute path of uvmc_rvfi_decoder_pkg.sv
+    decoder_pkg_path = os.path.join(DV_UVMC_RVFI_REFERENCE_MODEL_PATH, "uvmc_rvfi_decoder_pkg.sv")
 
-    # Aggiungi il path della directory di inst.sverilog al +incdir
-    vcs_compile_flags += f" +incdir+{os.path.dirname(inst_file_path)} "
+    # Add path in uvmc_rvfi_decoder_pkg.sv's directory to +incdir
+    vcs_compile_flags += f" +incdir+{os.path.dirname(decoder_pkg_path)} "
 
-    # Includi direttamente il file inst.sverilog nella compilazione
-    vcs_compile_flags += f" {inst_file_path} "
+    # Directly include the file uvmc_rvfi_decoder_pkg.sv into the build
+    vcs_compile_flags += f" {decoder_pkg_path} "
     
 
     optional_flags = "-suppress=PCTI-L -suppress=UII-L -kdb=common_elab -debug_acc+all -debug_region+cell+encrypt -fgp=num_threads:8 -fgp=auto_affinity:allowHyperThreadCpu +gc+high_threshold+5 +UVM_NO_RELNOTES"
@@ -466,6 +467,7 @@ if __name__ == "__main__":
         "CORE_RTL_PATH": CORE_RTL_PATH,
         "CORE_TB_PATH": CORE_TB_PATH,
         "RISCV_EXE_PREFIX": RISCV_EXE_PREFIX,
+        "DV_UVMC_RVFI_REFERENCE_MODEL_PATH": DV_UVMC_RVFI_REFERENCE_MODEL_PATH,
         "GCC": GCC,
         "GXX": GXX,
         "march": march,

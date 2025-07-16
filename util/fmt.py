@@ -81,10 +81,12 @@ git -C {CORE_TB_PATH} checkout {tb_commit}
 
 parse_cmd = """
 cd {RISCV_OPCODES_DIR} && python parse.py -sverilog {ext_supported}
+cp inst.sverilog {DV_UVMC_RVFI_REFERENCE_MODEL_PATH}/uvmc_rvfi_decoder_pkg.sv
+sed -i 's/package riscv_instr;/package uvmc_rvfi_decoder_pkg;/' {DV_UVMC_RVFI_REFERENCE_MODEL_PATH}/uvmc_rvfi_decoder_pkg.sv
 """
 
 autogen_cmd = """
-cd {RISCV_OPCODES_DIR} && python decoder_autogen.py
+cd {RISCV_OPCODES_DIR}/../util && python decoder_autogen.py
 """
 
 dpi_compile_cmd = """
