@@ -10,3 +10,7 @@
 [submodule "core-v-cores/cv32e20"]
 	path = core-v-cores/cv32e20
 	url = git@github.com:synthara/rv2.git
+[submodule "core-v-cores/xcs"]
+	path = core-v-cores/xcs
+	url = git@github.com:synthara/D-RVV-XCS_eXtension_Interface_Coprocessor_SIMD_ext.git
+	branch = tristan_fdm_dev
