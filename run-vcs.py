@@ -257,10 +257,10 @@ if __name__ == "__main__":
     os.environ["DESIGN_RTL_DIR"] = f"{CV_CORE_PKG}/rtl"
 
     if args.cop:
-        os.environ["RVV_PATH"] = f"{CV_CORE_PKG}/../coproc_xcs"
-        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../coproc_xcs/src/dsl"
+        os.environ["RVV_PATH"] = f"{CV_CORE_PKG}/../xcs"
+        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
 
-        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/coproc_xcs/coproc.fl "
+        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/xcs/coproc.fl "
         
         rtl_commit = RTL_COP_COMMIT
         tb_commit = TB_COP_COMMIT
@@ -269,10 +269,10 @@ if __name__ == "__main__":
         tb_commit = TB_BASE_COMMIT
 
     if args.dmv:
-        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../coproc_xcs/src/dsl"
-        os.environ["DMV_PATH"] = f"{CV_CORE_PKG}/../smart_LSU"
+        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
+        os.environ["DMV_PATH"] = f"{CV_CORE_PKG}/../lsu"
 
-        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/smart_LSU/datamover.fl "
+        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/lsu/datamover.fl "
 
 
     os.environ["DPI_DASM_ROOT"] = "{CORE_V_VERIF}/lib/dpi_dasm"
