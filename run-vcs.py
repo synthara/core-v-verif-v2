@@ -12,9 +12,9 @@ RTL_COP_COMMIT = "642907fdbc57e7bd7230feece89e86f0c98f8b6f"
 RTL_BASE_COMMIT = "e027937aef36f95723b05f19eecdd2f567495e57"
 
 # Commit on branch test_cv_instr
-TB_COP_COMMIT = "29e5f2e5e1bf6a4662149884f0e412224d5b9258"
+TB_COP_COMMIT = "c686306e4c9bfc5d20d3a1367a615ae84e3162bc"
 # Commit on branch feature/interrupts
-TB_BASE_COMMIT = "29e5f2e5e1bf6a4662149884f0e412224d5b9258"
+TB_BASE_COMMIT = "e892f368f831b0df7d5da00a93c5ef6d5b7998cc"
 
 allowed_tests = [
     "uvmt_cv32e20_firmware_test_c",
