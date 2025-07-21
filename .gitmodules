@@ -1,9 +1,6 @@
 [submodule "lib/yaml-cpp"]
 	path = vendor/riscv/riscv-isa-sim/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
-[submodule "cv32e20"]
-	path = cv32e20
-	url = git@github.com:synthara/cv32e20-dv-v2.git
 [submodule "riscv-opcodes"]
 	path = riscv-opcodes
 	url = git@github.com:synthara/riscv-opcodes.git
@@ -16,3 +13,6 @@
 [submodule "/home/pab/workspace/core-v-verif-v2-test/core-v-cores/smart_LSU"]
 	path = /home/pab/workspace/core-v-verif-v2-test/core-v-cores/smart_LSU
 	url = git@github.com:synthara/D-SLS-SmartLSU.git
+[submodule "cv32e20"]
+	path = cv32e20
+	url = git@github.com:synthara/cv32e20-dv.git
