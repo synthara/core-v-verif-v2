@@ -14,3 +14,7 @@
 	path = core-v-cores/xcs
 	url = git@github.com:synthara/D-RVV-XCS_eXtension_Interface_Coprocessor_SIMD_ext.git
 	branch = tristan_fdm_dev
+[submodule "core-v-cores/lsu"]
+	path = core-v-cores/lsu
+	url = git@github.com:synthara/D-SLS-SmartLSU.git
+	branch = tristan_fdm_dev
