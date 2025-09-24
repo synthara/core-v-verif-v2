@@ -28,7 +28,18 @@ class uvma_cvxif_req_item_c extends uvm_sequence_item;
    rand logic               commit_valid;
    rand logic               result_ready;
 
-   `uvm_object_utils(uvma_cvxif_req_item_c)
+   `uvm_object_utils_begin(uvma_cvxif_req_item_c)
+      `uvm_field_int(issue_req, UVM_DEFAULT)
+      `uvm_field_int(compressed_req, UVM_NOCOMPARE)
+      `uvm_field_int(register, UVM_DEFAULT)
+      `uvm_field_int(commit_req, UVM_NOCOMPARE)
+
+      `uvm_field_int(issue_valid, UVM_DEFAULT)
+      `uvm_field_int(compressed_valid, UVM_NOCOMPARE)
+      `uvm_field_int(register_valid, UVM_NOCOMPARE)
+      `uvm_field_int(commit_valid, UVM_DEFAULT)
+      `uvm_field_int(result_ready, UVM_NOCOMPARE)
+   `uvm_object_utils_end
 
    /**
     * Default constructor.

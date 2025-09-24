@@ -26,7 +26,10 @@ package uvma_cvxif_pkg;
 
    import uvm_pkg ::*;
 
-   parameter int X_NUM_RS        = 2;
+   `uvm_analysis_imp_decl(_cvxif_req)
+   `uvm_analysis_imp_decl(_cvxif_resp)
+
+   parameter int X_NUM_RS        = 3;
    parameter int X_ID_WIDTH      = 3;
    parameter int X_RFR_WIDTH     = 32;
    parameter int X_RFW_WIDTH     = 32;
@@ -57,8 +60,8 @@ package uvma_cvxif_pkg;
    `include "uvma_cvxif_agent.sv"
 
    // Virtual Sequences
-   `include "uvme_cvxif_base_vseq.sv"
-   `include "uvme_cvxif_vseq.sv"
+   //`include "uvme_cvxif_base_vseq.sv"
+   //`include "uvme_cvxif_vseq.sv"
 
 endpackage : uvma_cvxif_pkg
 

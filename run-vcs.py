@@ -7,12 +7,12 @@ import json
 from util import fmt
 
 # Commit on branch feature/fdm_dev_tristan
-RTL_COP_COMMIT = "642907fdbc57e7bd7230feece89e86f0c98f8b6f"
+RTL_COP_COMMIT = "e5e7c6e82e8e6d6b46e4f5ae61e2a1331e41d607"
 # Commit on branch feature/rvfi_improvements
 RTL_BASE_COMMIT = "e027937aef36f95723b05f19eecdd2f567495e57"
 
-# Commit on branch test_cv_instr
-TB_COP_COMMIT = "c686306e4c9bfc5d20d3a1367a615ae84e3162bc"
+# Commit on branch pab_uvm_tristan
+TB_COP_COMMIT = "a7e008b1c88c880898bacc785659319cba76bf9b"
 # Commit on branch feature/interrupts
 TB_BASE_COMMIT = "e892f368f831b0df7d5da00a93c5ef6d5b7998cc"
 
@@ -218,6 +218,7 @@ if __name__ == "__main__":
     os.environ["DV_UVMA_ISACOV_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_isacov"
     os.environ["DV_UVMA_RVFI_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_rvfi"
     os.environ["DV_UVMA_RVVI_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_rvvi"
+    os.environ["DV_UVMA_CVXIF_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif"
     os.environ["DV_UVMA_RVVI_OVPSIM_PATH"] = (
         f"{CORE_V_VERIF}/lib/uvm_agents/uvma_rvvi_ovpsim"
     )
@@ -257,10 +258,10 @@ if __name__ == "__main__":
     os.environ["DESIGN_RTL_DIR"] = f"{CV_CORE_PKG}/rtl"
 
     if args.cop:
-        os.environ["RVV_PATH"] = f"{CV_CORE_PKG}/../coproc_xcs"
-        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../coproc_xcs/src/dsl"
+        os.environ["RVV_PATH"] = f"{CV_CORE_PKG}/../xcs"
+        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
 
-        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/coproc_xcs/coproc.fl "
+        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/xcs/coproc.fl "
         
         rtl_commit = RTL_COP_COMMIT
         tb_commit = TB_COP_COMMIT
@@ -269,10 +270,10 @@ if __name__ == "__main__":
         tb_commit = TB_BASE_COMMIT
 
     if args.dmv:
-        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../coproc_xcs/src/dsl"
-        os.environ["DMV_PATH"] = f"{CV_CORE_PKG}/../smart_LSU"
+        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
+        os.environ["DMV_PATH"] = f"{CV_CORE_PKG}/../lsu"
 
-        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/smart_LSU/datamover.fl "
+        additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/lsu/datamover.fl "
 
 
     os.environ["DPI_DASM_ROOT"] = "{CORE_V_VERIF}/lib/dpi_dasm"
@@ -391,7 +392,7 @@ if __name__ == "__main__":
     # if uvm_test_name == "rec_tb_cor_axi_test_drive_both_computeram_no_fw_preload":
     #     crt0_path = f"{CORE_V_VERIF}/design/top/rec/scripts/c/dram_system/crt0.S"
 
-    if program_name in ["hello-world", "fibonacci", "csr_instructions", "branch_zero"]:
+    if program_name in ["hello-world", "fibonacci", "csr_instructions", "branch_zero", "dhrystone"]:
         c_files = f"{CORE_TB_PATH}/tests/programs/custom/{program_name}/{program_name}.c"
     elif program_name == "coremark":
         c_files = f"-DITERATIONS=1 \
@@ -469,7 +470,7 @@ if __name__ == "__main__":
         "RISCV_EXE_PREFIX": RISCV_EXE_PREFIX,
         "DV_UVMC_RVFI_REFERENCE_MODEL_PATH": DV_UVMC_RVFI_REFERENCE_MODEL_PATH,
         "GCC": GCC,
-        "GXX": GXX,
+        "GXX": GCC,
         "march": march,
         "core_dv_dir": core_dv_dir,
         "csrc_dir": csrc_dir,

@@ -401,7 +401,7 @@ for instruction, impls in impl_dict.items():
 # Filling the casez_dict which will contain all the datas to be put in the case
 for i, (key, val) in enumerate(opcode_dict.items()):
     casez_dict[f"condition{i}"] = f"{key}"
-    casez_dict[f"assign{i}"]    = f'`uvm_info("{key}", \"Instruction {key} detected successfully\", UVM_MEDIUM)\n'
+    casez_dict[f"assign{i}"]    = f'`uvm_info("{key}", \"Instruction {key} detected successfully\", UVM_LOW)\n\n\n\n'
     for j, (instr, fields) in enumerate(only_variable_fields.items()):
         if(key.lower() == instr.lower()):
             #fmt_name = instruction_formats[instr]
@@ -502,15 +502,16 @@ else:
         return t_reference_model_prov;
     endfunction 
 
-    function void write_rvfi_instr(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model = step(1, t);
-        m_analysis_port.write(t_reference_model);
-        `uvm_info(get_type_name(), "Dummy write_rvfi_instr function called", UVM_MEDIUM)
-    endfunction : write_rvfi_instr
+    //function void write_rvfi_instr(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
+        //uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model = step(1, t);
+        //m_analysis_port.write(t_reference_model);
+        //`uvm_info(get_type_name(), "Dummy write_rvfi_instr function called", UVM_MEDIUM)
+    //endfunction : write_rvfi_instr
 """
 
 #This block is used to fill the rvfi_instr_seq_item with the values extracted from the instruction
 rvfi_block = f"""
+
 {INDENT_TWO}rvfi_instr_seq_item.order     = order++;
 {INDENT_TWO}rvfi_instr_seq_item.insn      = instr;
 {INDENT_TWO}rvfi_instr_seq_item.rs1_addr  = rs1;
@@ -521,6 +522,30 @@ rvfi_block = f"""
 {INDENT_TWO}rvfi_instr_seq_item.rd1_wdata = reg_file[rd];
 {INDENT_TWO}rvfi_instr_seq_item.pc_rdata  = pc_before;
 {INDENT_TWO}rvfi_instr_seq_item.pc_wdata  = pc;
+
+{INDENT_TWO}if(is_cv_instr) begin
+{INDENT_THREE}cvx_instr_req_item.issue_req.instr = instr;
+{INDENT_THREE}//cvx_instr_req_item.commit_req.commit_kill = commit_kill;
+{INDENT_THREE}cvx_instr_req_item.register.rs[0] = reg_rs1_prev;
+{INDENT_THREE}cvx_instr_req_item.register.rs[1] = reg_rs2_prev;
+{INDENT_THREE}cvx_instr_req_item.register.rs[2] = reg_rs3_prev;
+{INDENT_THREE}cvx_instr_req_item.register.rs_valid = 3'b111;
+{INDENT_THREE}cvx_instr_req_item.issue_valid = 1'b1;
+{INDENT_THREE}cvx_instr_req_item.commit_valid = 1'b1;
+{INDENT_THREE}cvx_instr_resp_item.issue_resp.accept = 1'b1;
+{INDENT_THREE}//cvx_instr_resp_item.issue_resp.writeback = {{ (X_DUALWRITE+1){{1'b1}}}};
+{INDENT_THREE}//cvx_instr_resp_item.issue_resp.register_read = {{ (X_NUM_RS+X_DUALREAD){{1'b1}}}};
+{INDENT_THREE}cvx_instr_resp_item.result.rd  = rd;
+{INDENT_THREE}//$display("rd:%0d", cvx_instr_resp_item.result.rd);
+{INDENT_THREE}cvx_instr_resp_item.result.data  = reg_file[rd];
+{INDENT_THREE}//$display("rd_data:%0h", cvx_instr_resp_item.result.data);
+{INDENT_THREE}cvx_instr_resp_item.result_valid = 1'b1;
+{INDENT_THREE}cvx_instr_resp_item.result.we = 1'b1;
+{INDENT_THREE}//cvx_instr_resp_item.issue_ready = 1'b1;
+{INDENT_THREE}m_ap_cvxif_resp.write(cvx_instr_resp_item);
+{INDENT_THREE}m_ap_cvxif_req.write(cvx_instr_req_item);
+{INDENT_TWO}end
+
 """
 
 
@@ -560,6 +585,7 @@ class {class_name} extends {main_class};
     bit [31:0] addr;
     bit [31:0] reg_rs1_prev;
     bit [31:0] reg_rs2_prev;
+    bit [31:0] reg_rs3_prev;
     bit [31:0] rs2_masked;
     bit [31:0] imm6_ext;
     bit [31:0] reg_result;
@@ -568,9 +594,12 @@ class {class_name} extends {main_class};
     bit [31:0] lpstart[1:0];
     bit [31:0] lpend[1:0];
     bit [31:0] lpcount[1:0];
+    bit is_cv_instr;
 
 
     uvma_rvfi_instr_seq_item_c#(32, 32) rvfi_instr_seq_item;
+    uvma_cvxif_resp_item_c cvx_instr_resp_item;
+    uvma_cvxif_req_item_c cvx_instr_req_item;
     `uvm_component_utils_begin({class_name})
     `uvm_component_utils_end
 
@@ -618,10 +647,14 @@ class {class_name} extends {main_class};
     function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) decode_opcode(bit[{instr_width}-1:0] instr);
 
         rvfi_instr_seq_item = uvma_rvfi_instr_seq_item_c#(32,32)::type_id::create("rvfi_instr_seq_item", this);
+        cvx_instr_resp_item = uvma_cvxif_resp_item_c::type_id::create("cvx_instr_resp_item", this);
+        cvx_instr_req_item = uvma_cvxif_req_item_c::type_id::create("cvx_instr_req_item", this);
 
         rvfi_instr_seq_item.mode = mode;
 
         incr = 4;
+
+        is_cv_instr = 1'b0;
 
         pc_before = pc;
 

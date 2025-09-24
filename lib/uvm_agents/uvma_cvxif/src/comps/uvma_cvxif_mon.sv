@@ -28,6 +28,7 @@ class uvma_cvxif_mon_c extends uvm_monitor;
    string info_tag = "CVXIF_MONITOR";
 
    int req_valid;
+   int resp_valid;
 
    uvm_analysis_port#(uvma_cvxif_req_item_c)  req_ap;
    uvm_analysis_port#(uvma_cvxif_resp_item_c) resp_ap;
@@ -189,7 +190,7 @@ task uvma_cvxif_mon_c::collect_and_send_req(uvma_cvxif_req_item_c req_tr);
          end
 
          //Detect an issue_req transaction
-         if (cntxt.vif.register_valid) begin
+         //if (cntxt.vif.register_valid) begin
             req_tr.register_valid     = cntxt.vif.register_valid;
             req_tr.register.hartid    = cntxt.vif.register.hartid;
             req_tr.register.id        = cntxt.vif.register.id;
@@ -201,7 +202,7 @@ task uvma_cvxif_mon_c::collect_and_send_req(uvma_cvxif_req_item_c req_tr);
             end
             `uvm_info(info_tag, $sformatf("New register valid transaction received"), UVM_HIGH);
             req_valid = 1;
-         end
+         //end
 
          //Detect commit transaction
          if (cntxt.vif.commit_valid) begin
@@ -226,36 +227,83 @@ endtask
 
 task uvma_cvxif_mon_c::collect_and_send_resp(uvma_cvxif_resp_item_c resp_tr);
 
+   // int cnt = 0;
+
+   // forever begin
+   //    fork
+   //       // begin
+   //       //    wait (cntxt.vif.compressed_ready && cntxt.vif.compressed_valid);
+   //       //       resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr");
+   //       //       resp_tr.compressed_resp.accept  = cntxt.vif.compressed_resp.accept;
+   //       //       resp_tr.compressed_resp.instr   = cntxt.vif.compressed_resp.instr;
+   //       //       `uvm_info(info_tag, $sformatf("send compreseed resp"), UVM_HIGH);
+   //       // end
+   //       begin
+   //          wait (cntxt.vif.issue_ready && cntxt.vif.issue_valid);
+   //          $display("[%0t], issue_ready", $time);
+   //             resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr");
+   //             resp_tr.issue_resp.accept         = cntxt.vif.issue_resp.accept;
+   //             resp_tr.issue_resp.writeback      = cntxt.vif.issue_resp.writeback;
+   //             resp_tr.issue_resp.register_read  = cntxt.vif.issue_resp.register_read;
+   //             `uvm_info(info_tag, $sformatf("send issue resp"), UVM_HIGH);
+   //       end
+   //       begin
+   //          wait (cntxt.vif.result_valid && cntxt.vif.result_ready);
+   //             resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr");
+   //             resp_tr.result_valid     = cntxt.vif.result_valid;
+   //             resp_tr.result.hartid    = cntxt.vif.result.hartid;
+   //             resp_tr.result.id        = cntxt.vif.result.id;
+   //             resp_tr.result.data      = cntxt.vif.result.data;
+   //             resp_tr.result.rd        = cntxt.vif.result.rd;
+   //             resp_tr.result.we        = cntxt.vif.result.we;
+   //             $display("[%s][%0t][cnt=%0d], result_ready resp: %s", get_full_name(), $time, cnt, resp_tr.sprint());
+   //             cnt += 1;
+   //             `uvm_info(info_tag, $sformatf("send result resp"), UVM_HIGH);
+   //       end
+   //    join_any
+   //    disable fork;
+   //    resp_ap.write(resp_tr);
+   //    @(cntxt.vif.slv_cvxif_cb);
+   //    // $display("[%0t] AFTER CLOCKING WAIT", time$);
+   //    `uvm_info("cICCIO", "cICCIO pLUTO", UVM_LOW);
+
+
+   //    end
+
    forever begin
-      fork
-         begin
-            wait (cntxt.vif.compressed_ready && cntxt.vif.compressed_valid);
-               resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr");
-               resp_tr.compressed_resp.accept  = cntxt.vif.compressed_resp.accept;
-               resp_tr.compressed_resp.instr   = cntxt.vif.compressed_resp.instr;
-               `uvm_info(info_tag, $sformatf("send compreseed resp"), UVM_HIGH);
+
+      if ((cntxt.vif.result_valid && cntxt.vif.result_ready)) begin
+
+         resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr", this);
+         `uvm_info(info_tag, "New response observed", UVM_HIGH)
+
+         // wait(cntxt.vif.issue_valid && cntxt.vif.issue_ready) //begin
+         //    resp_tr.issue_ready               = cntxt.vif.issue_ready;
+         //    resp_tr.issue_resp.accept         = cntxt.vif.issue_resp.accept;
+         //    resp_tr.issue_resp.writeback      = cntxt.vif.issue_resp.writeback;
+         //    resp_tr.issue_resp.register_read  = cntxt.vif.issue_resp.register_read;
+         //    `uvm_info(info_tag, "Captured issue_resp", UVM_HIGH)
+         //    resp_valid = 1;
+         // //end
+
+         if (cntxt.vif.result_valid && cntxt.vif.result_ready) begin
+            resp_tr.result_valid  = cntxt.vif.result_valid;
+            resp_tr.result.hartid = cntxt.vif.result.hartid;
+            resp_tr.result.id     = cntxt.vif.result.id;
+            resp_tr.result.data   = cntxt.vif.result.data;
+            resp_tr.result.rd     = cntxt.vif.result.rd;
+            resp_tr.result.we     = cntxt.vif.result.we;
+            `uvm_info(info_tag, "Captured result_resp", UVM_HIGH)
+            resp_valid = 1;
+
          end
-         begin
-            wait (cntxt.vif.issue_ready && cntxt.vif.issue_valid);
-               resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr");
-               resp_tr.issue_resp.accept         = cntxt.vif.issue_resp.accept;
-               resp_tr.issue_resp.writeback      = cntxt.vif.issue_resp.writeback;
-               resp_tr.issue_resp.register_read  = cntxt.vif.issue_resp.register_read;
-               `uvm_info(info_tag, $sformatf("send issue resp"), UVM_HIGH);
+
+         if (resp_valid) begin
+            `uvm_info(info_tag, $sformatf("Sending req to sqr %p", resp_tr), UVM_HIGH);
+            resp_ap.write(resp_tr);
+            resp_valid = 0;
          end
-         begin
-            wait (cntxt.vif.result_valid && cntxt.vif.result_ready);
-               resp_tr = uvma_cvxif_resp_item_c::type_id::create("resp_tr");
-               resp_tr.result_valid     = cntxt.vif.result_valid;
-               resp_tr.result.hartid    = cntxt.vif.result.hartid;
-               resp_tr.result.id        = cntxt.vif.result.id;
-               resp_tr.result.data      = cntxt.vif.result.data;
-               resp_tr.result.rd        = cntxt.vif.result.rd;
-               resp_tr.result.we        = cntxt.vif.result.we;
-               `uvm_info(info_tag, $sformatf("send result resp"), UVM_HIGH);
-         end
-      join_any
-      resp_ap.write(resp_tr);
+      end
       @(cntxt.vif.slv_cvxif_cb);
    end
 

@@ -24,6 +24,8 @@ class uvmc_rvfi_reference_model#(int ILEN=DEFAULT_ILEN,
 
     uvm_analysis_imp_rvfi_instr#(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN), uvmc_rvfi_reference_model) m_analysis_imp;
     uvm_analysis_port#(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN)) m_analysis_port;
+    uvm_analysis_port#(uvma_cvxif_resp_item_c) m_ap_cvxif_resp;
+    uvm_analysis_port#(uvma_cvxif_req_item_c) m_ap_cvxif_req;
 
    // Core configuration (used to extract list of CSRs)
    uvma_core_cntrl_cfg_c         cfg;
@@ -45,6 +47,8 @@ class uvmc_rvfi_reference_model#(int ILEN=DEFAULT_ILEN,
        super.new(name, parent);
        m_analysis_imp = new("m_analysis_imp", this);
        m_analysis_port = new("m_analysis_port", this);
+       m_ap_cvxif_resp = new("m_ap_cvxif_resp", this);
+       m_ap_cvxif_req = new("m_ap_cvxif_req", this);
 
    endfunction : new
 
