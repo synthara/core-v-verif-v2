@@ -106,24 +106,12 @@ class uvmc_rvfi_scoreboard_c#(int ILEN=DEFAULT_ILEN,
    function void write_cvx_req_rtl(uvma_cvxif_req_item_c t);
 
       core_cvx_req.push_back(t);
-      $display("instr: %h", t.issue_req.instr);
-      $display("register[0]: %h", t.register.rs[0]);
-      $display("register[1]: %h", t.register.rs[1]);
-      $display("register[2]: %h", t.register.rs[2]);
-
-      `uvm_info("SB/CVXIF_REQ_RTL", {"\n", t.sprint()}, UVM_LOW)
 
    endfunction
 
    function void write_cvx_req_ref_model(uvma_cvxif_req_item_c t);
 
       reference_model_cvx_req.push_back(t);
-      $display("instr: %h", t.issue_req.instr);
-            $display("register[0]: %h", t.register.rs[0]);
-      $display("register[1]: %h", t.register.rs[1]);
-      $display("register[2]: %h", t.register.rs[2]);
-
-      `uvm_info("SB/CVXIF_REQ_REF", {"\n", t.sprint()}, UVM_LOW)
 
    endfunction
 
