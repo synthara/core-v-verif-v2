@@ -18,3 +18,4 @@
 [submodule "riscv-opcodes"]
 	path = riscv-opcodes
 	url = git@github.com:synthara/riscv-opcodes.git
+	branch = remotes/origin/master
