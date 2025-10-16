@@ -428,7 +428,7 @@ if __name__ == "__main__":
             "test_program_compile_cmd": test_program_compile_cmd,
             "hex_compile_cmd": hex_compile_cmd,
         }
-    if args.sw_compile_only_bsp:
+    elif args.sw_compile_only_bsp:
         cmd_dict |= {
             "bsp_compile_cmd": bsp_compile_cmd
         }
