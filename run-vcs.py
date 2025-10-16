@@ -47,10 +47,13 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-asf", help="ASF flag (accepts a string)", default="", type=str)
 parser.add_argument("-out_dir", help="Output directory for the simulation results", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "log"))
 parser.add_argument("-gui", help="Run the simulation in GUI mode", action="store_true")
+parser.add_argument("-test_idx", help="Specify the test index (integer)", type=int, default=0)
 parser.add_argument("-cop", help="Compile the coprocessor as well", action="store_true")
 parser.add_argument("-dmv", help="Compile the data mover as well", action="store_true")
+parser.add_argument("-uvm_verbosity", help='Set UVM verbosity level (default: "UVM_LOW")', type=str, default="UVM_LOW")
 parser.add_argument("--rtl-only", help="Only compiles and simulates the RTL", action="store_true")
 parser.add_argument("--rtl-compile-only", help="Only compiles the RTL", action="store_true")
+parser.add_argument("--rtl-sim-only", help="Only simulates the RTL", action="store_true")
 parser.add_argument("--sw-compile-only", help="Compile only the SW, not the HW", action="store_true")
 parser.add_argument("--sw-compile-only-bsp", help="Compile only the BSP", action="store_true")
 # program can either be a program name or a path to the precompiled program. The .hex and .itb files should be in the same directory as the program
@@ -382,7 +385,8 @@ if __name__ == "__main__":
         "tb_commit": tb_commit,
         "ext_supported": ext_supported,
         "additional_string_sim": args.asf,
-        "decoder_autogen_flags": decoder_autogen_flags
+        "decoder_autogen_flags": decoder_autogen_flags,
+        "uvm_verbosity": args.uvm_verbosity
     }
 
     google_compile_cmd = fmt.google_compile_cmd.format(**fmt_dict)
@@ -440,6 +444,10 @@ if __name__ == "__main__":
     elif args.rtl_compile_only:
         cmd_dict |= {
             "sv_compile_cmd": sv_compile_cmd
+        }
+    elif args.rtl_sim_only:
+        cmd_dict |= {
+            "sv_sim_cmd": sv_sim_cmd
         }
     else:
         cmd_dict |= {

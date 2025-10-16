@@ -21,7 +21,7 @@ class Config:
         self.VCS_OUT_DIR                           = os.path.join(self.OUT_DIR, "default", "vcs_results")
         self.CORE_DV_DIR                           = os.path.join(self.OUT_DIR, "default", "corev-dv")
         self.CSRC_DIR                              = os.path.join(self.VCS_OUT_DIR, "csrc")
-        self.TEST_PROGRAM_DIR                      = os.path.join(self.VCS_OUT_DIR, "default", args.program, "0", "test_program")
+        self.TEST_PROGRAM_DIR                      = os.path.join(self.VCS_OUT_DIR, "default", args.program, str(args.test_idx), "test_program")
         self.BSP_DIR                               = os.path.join(self.TEST_PROGRAM_DIR, "bsp")
         self.VCS_DEFINES = [
             "+define+VCS",

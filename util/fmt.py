@@ -172,7 +172,7 @@ mkdir -p {vcs_out_dir}/default/{program}/0 && \
 cd {vcs_out_dir}/default/{program}/0 && \
 {vcs_out_dir}/simv \
 -licwait 20 \
--l vcs-{program}.log \
+-l vcs-{uvm_test_name}_{program}.log \
 -cm_name {program} \
 -sv_lib {CORE_V_VERIF}/tools/spike/lib/libyaml-cpp \
 -sv_lib {CORE_V_VERIF}/tools/spike/lib/libriscv \
@@ -185,7 +185,7 @@ cd {vcs_out_dir}/default/{program}/0 && \
 +USE_ISS \
 {gui} \
 {define_ssm_spike} \
-+UVM_VERBOSITY=UVM_LOW \
++UVM_VERBOSITY={uvm_verbosity} \
 +report_file={program}.yaml \
 +signature=I-ADD-01.signature_output \
 +UVM_TESTNAME={uvm_test_name} \
