@@ -48,6 +48,7 @@ parser.add_argument("-out_dir", help="Output directory for the simulation result
 parser.add_argument("-gui", help="Run the simulation in GUI mode", action="store_true")
 parser.add_argument("-cop", help="Compile the coprocessor as well", action="store_true")
 parser.add_argument("-dmv", help="Compile the data mover as well", action="store_true")
+parser.add_argument("--compile-only", help="Only compiles the RTL", action="store_true")
 parser.add_argument(
     "-sw_only", help="Compile only the SW, not the HW", action="store_true"
 )
@@ -257,6 +258,8 @@ if __name__ == "__main__":
     CV_CORE_MANIFEST = f"{CV_CORE_PKG}/{CV_CORE_LC}_manifest.flist"
     os.environ["DESIGN_RTL_DIR"] = f"{CV_CORE_PKG}/rtl"
 
+    # additional_filelist += f"-f {CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif/src/uvma_cvxif_pkg.flist "
+    
     if args.cop:
         os.environ["RVV_PATH"] = f"{CV_CORE_PKG}/../xcs"
         os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
@@ -268,6 +271,9 @@ if __name__ == "__main__":
     else:
         rtl_commit = RTL_BASE_COMMIT
         tb_commit = TB_BASE_COMMIT
+
+        # Still compile the cvxif agent even if the coprocessor is not compiled, as it is used to drive the custom instructions
+        additional_filelist += f"-f {CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif/src/uvma_cvxif_pkg.flist "
 
     if args.dmv:
         os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
@@ -453,6 +459,11 @@ if __name__ == "__main__":
     for el in riscv_opcodes_config["ext_supported"]:
         ext_supported += f"{el} "
 
+    decoder_autogen_flags = ""
+
+    if args.cop:
+        decoder_autogen_flags += "--instantiate_cvxif"
+
     ###################################################################
     ################ FORMAT COMMANDS TEMPLATE   #######################
     ###################################################################
@@ -500,7 +511,8 @@ if __name__ == "__main__":
         "rtl_commit": rtl_commit,
         "tb_commit": tb_commit,
         "ext_supported": ext_supported,
-        "additional_string_sim": args.asf
+        "additional_string_sim": args.asf,
+        "decoder_autogen_flags": decoder_autogen_flags
     }
 
     google_compile_cmd = fmt.google_compile_cmd.format(**fmt_dict)
@@ -576,13 +588,19 @@ if __name__ == "__main__":
         exit()
         
     for cmd_idx, (key, cmd) in enumerate(hw_cmd_dict.items()):
-        print("\n**********************************************************")
-        print(f"{key}:\n{cmd}")
-        print("**********************************************************")
 
-        process = subprocess.Popen(cmd, shell=True)
-        process.wait()
+        if args.compile_only and key == "sv_sim_cmd":
+            print("\n**********************************************************")
+            print(f"SKIPPING command {key} due to flag --compile-only")
+            print("**********************************************************")
+        else:
+            print("\n**********************************************************")
+            print(f"{key}:\n{cmd}")
+            print("**********************************************************")
 
-        if process.returncode != 0:
-            print("\033[91m" + f"Error occurred in {key}. Exiting..." + "\033[0m")
-            exit()
+            process = subprocess.Popen(cmd, shell=True)
+            process.wait()
+
+            if process.returncode != 0:
+                print("\033[91m" + f"Error occurred in {key}. Exiting..." + "\033[0m")
+                exit()

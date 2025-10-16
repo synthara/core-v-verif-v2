@@ -5,7 +5,7 @@ import uvmc_rvfi_reference_model_pkg::*;
 import uvma_core_cntrl_pkg::*;
 import uvme_cv32e20_pkg::*;
 import uvmc_rvfi_scoreboard_pkg::*;
-import uvma_cvxif_pkg::*;
+// import uvma_cvxif_pkg::*;
 
 class uvmt_cv32e20_model_test_c extends uvmt_cv32e20_firmware_test_c;
 

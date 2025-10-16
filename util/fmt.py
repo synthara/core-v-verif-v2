@@ -86,7 +86,7 @@ sed -i 's/package riscv_instr;/package uvmc_rvfi_decoder_pkg;/' {DV_UVMC_RVFI_RE
 """
 
 autogen_cmd = """
-cd {RISCV_OPCODES_DIR}/../util && python decoder_autogen.py
+cd {RISCV_OPCODES_DIR}/../util && python decoder_autogen.py {decoder_autogen_flags}
 """
 
 dpi_compile_cmd = """
