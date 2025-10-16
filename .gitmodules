@@ -1,12 +1,6 @@
 [submodule "lib/yaml-cpp"]
 	path = vendor/riscv/riscv-isa-sim/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp.git
-[submodule "cv32e20"]
-	path = cv32e20
-	url = git@github.com:synthara/cv32e20-dv.git
-[submodule "core-v-cores/cv32e20"]
-	path = core-v-cores/cv32e20
-	url = git@github.com:synthara/rv2.git
 [submodule "core-v-cores/xcs"]
 	path = core-v-cores/xcs
 	url = git@github.com:synthara/D-RVV-XCS_eXtension_Interface_Coprocessor_SIMD_ext.git
@@ -19,3 +13,12 @@
 	path = riscv-opcodes
 	url = git@github.com:synthara/riscv-opcodes.git
 	branch = remotes/origin/master
+[submodule "cv32e20"]
+	path = cv32e20
+	url = git@github.com:synthara/cv32e20-dv.git
+[submodule "core-v-cores/cv32e20"]
+	path = core-v-cores/cv32e20
+	url = git@github.com:synthara/rv2.git
+[submodule "cv32e20/vendor_lib/verilab/svlib"]
+    path = cv32e20/vendor_lib/verilab/svlib
+    ignore = all
