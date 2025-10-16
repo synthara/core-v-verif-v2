@@ -1,0 +1,8 @@
+test_list:
+  - uvmt_cv32e20_firmware_test_c
+  - uvmt_cv32e20_model_test_c
+
+program_list:
+  - hello-world
+  - fibonacci
+  - riscv_arithmetic_basic_test_0
