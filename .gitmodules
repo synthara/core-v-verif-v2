@@ -15,3 +15,6 @@
 	path = core-v-cores/lsu
 	url = git@github.com:synthara/D-SLS-SmartLSU.git
 	branch = tristan_fdm_dev
+[submodule "riscv-opcodes"]
+	path = riscv-opcodes
+	url = git@github.com:synthara/riscv-opcodes.git
