@@ -81,8 +81,8 @@ git -C {CORE_TB_PATH} checkout {tb_commit}
 
 parse_cmd = """
 cd {RISCV_OPCODES_DIR} && python parse.py -sverilog {ext_supported}
-cp inst.sverilog {DV_UVMC_RVFI_REFERENCE_MODEL_PATH}/uvmc_rvfi_decoder_pkg.sv
-sed -i 's/package riscv_instr;/package uvmc_rvfi_decoder_pkg;/' {DV_UVMC_RVFI_REFERENCE_MODEL_PATH}/uvmc_rvfi_decoder_pkg.sv
+cp inst.sverilog {DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH}
+sed -i 's/package riscv_instr;/package uvmc_rvfi_decoder_pkg;/' {DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH}
 """
 
 autogen_cmd = """
@@ -113,7 +113,7 @@ cd {bsp_dir} && \
 
 # USE The Custom Linker
 # *******************************************************************************************
-# * Compiling test-program {test_program_dir}/{program_name}.elf
+# * Compiling test-program {test_program_dir}/{program}.elf
 # *******************************************************************************************
 test_program_compile_cmd = """
 {RISCV_EXE_PREFIX}{GXX} \
@@ -128,7 +128,7 @@ test_program_compile_cmd = """
 -L {CORE_TB_PATH}/bsp/default \
 -I {CORE_V_VERIF}/CxR_tests \
 -L {bsp_dir} \
--o {test_program_dir}/{program_name}.elf \
+-o {test_program_dir}/{program}.elf \
 -nostartfiles \
 {c_files} \
 -T {linker_script} \
@@ -139,39 +139,41 @@ test_program_compile_cmd = """
 # * Generating hexfile, readelf and objdump files
 # *******************************************************************************************
 hex_compile_cmd = """
-{RISCV_EXE_PREFIX}objcopy -O verilog {test_program_dir}/{program_name}.elf {test_program_dir}/{program_name}.hex
-{RISCV_EXE_PREFIX}readelf -aW {test_program_dir}/{program_name}.elf > {test_program_dir}/{program_name}.readelf
-{RISCV_EXE_PREFIX}objdump -d -M no-aliases -M numeric -S {test_program_dir}/{program_name}.elf > {test_program_dir}/{program_name}.objdump
-{RISCV_EXE_PREFIX}objdump -d -S -M no-aliases -M numeric -l {test_program_dir}/{program_name}.elf | {CORE_V_VERIF}/bin/objdump2itb - > {test_program_dir}/{program_name}.itb
+{RISCV_EXE_PREFIX}objcopy -O verilog {test_program_dir}/{program}.elf {test_program_dir}/{program}.hex
+{RISCV_EXE_PREFIX}readelf -aW {test_program_dir}/{program}.elf > {test_program_dir}/{program}.readelf
+{RISCV_EXE_PREFIX}objdump -d -M no-aliases -M numeric -S {test_program_dir}/{program}.elf > {test_program_dir}/{program}.objdump
+{RISCV_EXE_PREFIX}objdump -d -S -M no-aliases -M numeric -l {test_program_dir}/{program}.elf | {CORE_V_VERIF}/bin/objdump2itb - > {test_program_dir}/{program}.itb
 """
 
  
 sv_compile_cmd = """
 cd {vcs_out_dir} &&  \
-{VCS_HOME}/bin/vcs +incdir+{VCS_HOME}/etc/uvm/src \
-+incdir+{CORE_V_VERIF}/lib/dpi_dasm {VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
+{VCS_HOME}/bin/vcs \
++incdir+{VCS_HOME}/etc/uvm/src \
++incdir+{CORE_V_VERIF}/lib/dpi_dasm \
+{VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
 {vcs_compile_flags} \
-{vcs_defines} {CXR_VERSION_DEFINE} {args_define} +incdir+{VCS_HOME}/etc/uvm/src \
++incdir+{VCS_HOME}/etc/uvm/src \
 {VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
 +incdir+{CORE_TB_PATH}/env/uvme \
 +incdir+{CORE_TB_PATH}/tb/uvmt \
 +incdir+{CORE_V_VERIF} \
-{test_define} {additional_filelist} \
+{additional_filelist} \
 -f {CORE_RTL_PATH}/cv32e20_manifest.flist \
 -f {CORE_TB_PATH}/tb/uvmt/uvmt_cv32e20.flist \
 {CORE_V_VERIF}/util/uvmt_cv32e20_model_test.sv \
-{optional_flags} \
--top uvmt_{cv_core}_tb -l vcs.log
+-top uvmt_{cv_core}_tb \
+-l vcs.log
 """
 
 
 sv_sim_cmd = """
-mkdir -p {vcs_out_dir}/default/{program_name}/0 && \
-cd {vcs_out_dir}/default/{program_name}/0 && \
+mkdir -p {vcs_out_dir}/default/{program}/0 && \
+cd {vcs_out_dir}/default/{program}/0 && \
 {vcs_out_dir}/simv \
 -licwait 20 \
--l vcs-{program_name}.log \
--cm_name {program_name} \
+-l vcs-{program}.log \
+-cm_name {program} \
 -sv_lib {CORE_V_VERIF}/tools/spike/lib/libyaml-cpp \
 -sv_lib {CORE_V_VERIF}/tools/spike/lib/libriscv \
 -sv_lib {CORE_V_VERIF}/tools/spike/lib/libdisasm \
@@ -184,7 +186,7 @@ cd {vcs_out_dir}/default/{program_name}/0 && \
 {gui} \
 {define_ssm_spike} \
 +UVM_VERBOSITY=UVM_LOW \
-+report_file={program_name}.yaml \
++report_file={program}.yaml \
 +signature=I-ADD-01.signature_output \
 +UVM_TESTNAME={uvm_test_name} \
 +fetch_initial_delay={fetch_initial_delay} \

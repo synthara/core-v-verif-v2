@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import json
 from util import fmt
+from config import Config
 
 # Commit on branch feature/fdm_dev_tristan
 RTL_COP_COMMIT = "e5e7c6e82e8e6d6b46e4f5ae61e2a1331e41d607"
@@ -44,20 +45,14 @@ allowed_toolchains = [
 # Argparse the input in search of the flag -gui
 parser = argparse.ArgumentParser()
 parser.add_argument("-asf", help="ASF flag (accepts a string)", default="", type=str)
-parser.add_argument("-out_dir", help="Output directory for the simulation results")
+parser.add_argument("-out_dir", help="Output directory for the simulation results", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "log"))
 parser.add_argument("-gui", help="Run the simulation in GUI mode", action="store_true")
 parser.add_argument("-cop", help="Compile the coprocessor as well", action="store_true")
 parser.add_argument("-dmv", help="Compile the data mover as well", action="store_true")
-parser.add_argument("--compile-only", help="Only compiles the RTL", action="store_true")
-parser.add_argument(
-    "-sw_only", help="Compile only the SW, not the HW", action="store_true"
-)
-parser.add_argument("--bsp-only", help="Compile only the BSP", action="store_true")
-parser.add_argument(
-    "--skip-testcase-comp",
-    help="Skip the compilation of the testcase.",
-    action="store_true",
-)
+parser.add_argument("--rtl-only", help="Only compiles and simulates the RTL", action="store_true")
+parser.add_argument("--rtl-compile-only", help="Only compiles the RTL", action="store_true")
+parser.add_argument("--sw-compile-only", help="Compile only the SW, not the HW", action="store_true")
+parser.add_argument("--sw-compile-only-bsp", help="Compile only the BSP", action="store_true")
 # program can either be a program name or a path to the precompiled program. The .hex and .itb files should be in the same directory as the program
 parser.add_argument("-program", help="Specify the program name", default="hello-world")
 parser.add_argument(
@@ -95,9 +90,6 @@ parser.add_argument("-delay", help="Fetch initial delay to give time to the TB t
 parser.add_argument("-core", help="Name of the core to simulate, default is cv32e20", default="cv32e20")
 
 if __name__ == "__main__":
-    
-    # Default define
-    test_define = ""
 
     additional_filelist = ""
 
@@ -105,6 +97,12 @@ if __name__ == "__main__":
 
     # Get path to the current directory
     CORE_V_VERIF = os.path.dirname(os.path.realpath(__file__))
+    os.environ["CORE_V_VERIF"] = CORE_V_VERIF
+
+    config = Config(args, CORE_V_VERIF)
+
+    # Default define
+    sv_comp_define = " ".join(config.VCS_DEFINES)
     
     # Print default values if no flag is passed
     for action in parser._actions:
@@ -120,12 +118,15 @@ if __name__ == "__main__":
     uvm_test_name = args.test
     fetch_initial_delay = args.delay # Use +fetch_initial_delay to give time to the jtag to write into the IMEM
     cv_core = args.core # Select the desired core
+    program = args.program
     
     if args.mem_dump is True:
-        test_define += "+define+DUMP_MEMORY"
+        sv_comp_define += "+define+DUMP_MEMORY"
         
     if args.bm is True:
-        test_define += "+define+BEHAVIORAL_MODEL"
+        sv_comp_define += "+define+BEHAVIORAL_MODEL"
+
+    sv_comp_define += f"+define+{args.define}"
 
     # If the flag -gui is set, run the simulation in GUI mode
     if args.gui:
@@ -145,125 +146,30 @@ if __name__ == "__main__":
     #####################################################################################
 
     # Main subrepos paths
-    # TODO: For the moment CORE V VERIF is aside of the RVV, should maybe become a submodule
-    CORE_RTL_PATH = f"{CORE_V_VERIF}/core-v-cores/{args.core}"
-    CORE_TB_PATH = f"{CORE_V_VERIF}/{args.core}"
-    VERILAB_DIR = f"{CORE_TB_PATH}/vendor_lib/verilab/svlib"
-    RISCV_OPCODES_DIR = f"{CORE_V_VERIF}/riscv-opcodes"
-    RISCV_OPCODES_CONFIG_PATH = f"{CORE_V_VERIF}/util/config.json"
-    DV_UVMC_RVFI_REFERENCE_MODEL_PATH = f"{CORE_V_VERIF}/lib/uvm_components/uvmc_rvfi_reference_model"
+    CORE_RTL_PATH                      = config.CORE_RTL_PATH
+    CORE_TB_PATH                       = config.CORE_TB_PATH
+    VERILAB_DIR                        = config.VERILAB_DIR
+    RISCV_OPCODES_DIR                  = config.RISCV_OPCODES_DIR
+    RISCV_OPCODES_CONFIG_PATH          = config.RISCV_OPCODES_CONFIG_PATH
+    DV_UVMC_RVFI_REFERENCE_MODEL_DIR   = config.DV_UVMC_RVFI_REFERENCE_MODEL_DIR
+    DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH  = config.DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH
+    VCS_HOME                           = config.VCS_HOME
+    RISCV_EXE_PREFIX                   = config.RISCV_EXE_PREFIX
 
-    os.environ["CORE_V_VERIF"] = CORE_V_VERIF
-    os.environ["CORE_RTL_PATH"] = CORE_RTL_PATH
-    os.environ["NOVAS_RC"] = "/opt/eda/synopsys/tools/verdi/V-2023.12/etc/custom_rovas.rc"
-
-    VCS_HOME                      = "/opt/eda/synopsys/tools/vcs/latest"
-    
     if args.march not in allowed_marches:
         print("\033[91m" + f"Error: {args.march} is not a valid march definition. Exiting..." + "\033[0m")
-        exit()
-    
-    RISCV_EXE_PREFIX = args.toolchain.format(march=args.march)
     
     if not shutil.which(RISCV_EXE_PREFIX + "gcc"):
         print(f"\033[91mError: Toolchain not found at {RISCV_EXE_PREFIX} (missing gcc). Exiting...\033[0m")
         exit()
-    
-    # Define CV_SW_TOOLCHAIN as RISCV_EXE_PREFIX with everything from 'bin/' on removed
-    CV_SW_TOOLCHAIN = RISCV_EXE_PREFIX.split("/bin/")[0]
-
-    os.environ["VCS_HOME"]        = VCS_HOME
-    os.environ["CV_SW_TOOLCHAIN"] = CV_SW_TOOLCHAIN
-    os.environ["SPIKE_PATH"]      = f"{CORE_V_VERIF}/vendor/riscv/riscv-isa-sim"
 
     GCC = "gcc"  # BSP is compiled with gcc
     GXX = "g++"  # Test program is compiled with g++
-
-    # CORE type setup
-    CV_CORE_LC = cv_core
-    os.environ["CV_CORE_LC"] = CV_CORE_LC
-
-    # export DV_UVMT_PATH           = $(CORE_V_VERIF)/$(CV_CORE_LC)/tb/uvmt
-    os.environ["DV_UVMT_PATH"] = f"{CORE_V_VERIF}/{CV_CORE_LC}/tb/uvmt"
-    # export DV_UVME_PATH           = $(CORE_V_VERIF)/$(CV_CORE_LC)/env/uvme
-    os.environ["DV_UVME_PATH"] = f"{CORE_V_VERIF}/{CV_CORE_LC}/env/uvme"
-    # export DV_UVML_HRTBT_PATH     = $(CORE_V_VERIF)/lib/uvm_libs/uvml_hrtbt
-    os.environ["DV_UVML_HRTBT_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_hrtbt"
-    # export DV_UVMA_ISACOV_PATH    = $(CORE_V_VERIF)/lib/uvm_agents/uvma_isacov
-    os.environ["DV_UVMA_ISACOV_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_isacov"
-    # export DV_UVMA_CLKNRST_PATH   = $(CORE_V_VERIF)/lib/uvm_agents/uvma_clknrst
-    os.environ["DV_UVMA_CLKNRST_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_clknrst"
-    # export DV_UVMA_INTERRUPT_PATH = $(CORE_V_VERIF)/lib/uvm_agents/uvma_interrupt
-    os.environ["DV_UVMA_INTERRUPT_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_interrupt"
-    # export DV_UVMA_DEBUG_PATH     = $(CORE_V_VERIF)/lib/uvm_agents/uvma_debug
-    os.environ["DV_UVMA_DEBUG_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_debug"
-    # export DV_UVML_TRN_PATH       = $(CORE_V_VERIF)/lib/uvm_libs/uvml_trn
-    os.environ["DV_UVML_TRN_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_trn"
-    # export DV_UVML_LOGS_PATH      = $(CORE_V_VERIF)/lib/uvm_libs/uvml_logs
-    os.environ["DV_UVML_LOGS_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_logs"
-    # export DV_UVML_SB_PATH        = $(CORE_V_VERIF)/lib/uvm_libs/uvml_sb
-    os.environ["DV_UVML_SB_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_sb"
-
-    # export DV_OVPM_HOME           = $(CORE_V_VERIF)/vendor_lib/imperas
-    os.environ["DV_OVPM_HOME"] = f"{CORE_V_VERIF}/vendor_lib/imperas"
-    # export DV_OVPM_MODEL          = $(DV_OVPM_HOME)/imperas_DV_COREV
-    os.environ["DV_OVPM_MODEL"] = f"{os.environ['DV_OVPM_HOME']}/imperas_DV_COREV"
-    # export DV_OVPM_DESIGN         = $(DV_OVPM_HOME)/design
-    os.environ["DV_OVPM_DESIGN"] = f"{os.environ['DV_OVPM_HOME']}/design"
-
-    # UVM Environment
-    os.environ["DV_UVMT_PATH"] = f"{CORE_V_VERIF}/{CV_CORE_LC}/tb/uvmt"
-    os.environ["DV_UVME_PATH"] = f"{CORE_V_VERIF}/{CV_CORE_LC}/env/uvme"
-    os.environ["DV_UVML_HRTBT_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_hrtbt"
-    os.environ["DV_UVMA_CORE_CNTRL_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_core_cntrl"
-    os.environ["DV_UVMA_ISACOV_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_isacov"
-    os.environ["DV_UVMA_RVFI_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_rvfi"
-    os.environ["DV_UVMA_RVVI_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_rvvi"
-    os.environ["DV_UVMA_CVXIF_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif"
-    os.environ["DV_UVMA_RVVI_OVPSIM_PATH"] = (
-        f"{CORE_V_VERIF}/lib/uvm_agents/uvma_rvvi_ovpsim"
-    )
-    os.environ["DV_UVMA_CLKNRST_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_clknrst"
-    os.environ["DV_UVMA_INTERRUPT_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_interrupt"
-    os.environ["DV_UVMA_DEBUG_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_debug"
-    os.environ["DV_UVMA_PMA_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_pma"
-    os.environ["DV_UVMA_OBI_MEMORY_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_obi_memory"
-    os.environ["DV_UVMA_FENCEI_PATH"] = f"{CORE_V_VERIF}/lib/uvm_agents/uvma_fencei"
-    os.environ["DV_UVML_TRN_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_trn"
-    os.environ["DV_UVML_LOGS_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_logs"
-    os.environ["DV_UVML_SB_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_sb"
-    os.environ["DV_UVML_MEM_PATH"] = f"{CORE_V_VERIF}/lib/uvm_libs/uvml_mem"
-
-    os.environ["DV_UVMC_RVFI_SCOREBOARD_PATH"] = (
-        f"{CORE_V_VERIF}/lib/uvm_components/uvmc_rvfi_scoreboard/"
-    )
-    os.environ["DV_UVMC_RVFI_REFERENCE_MODEL_PATH"] = (
-        f"{CORE_V_VERIF}/lib/uvm_components/uvmc_rvfi_reference_model/"
-    )
-
-    os.environ["DV_OVPM_HOME"] = f"{CORE_V_VERIF}/vendor_lib/imperas"
-    os.environ["DV_OVPM_MODEL"] = f"{os.environ['DV_OVPM_HOME']}/imperas_DV_COREV"
-
-    os.environ["DV_OVPM_DESIGN"] = f"{os.environ['DV_OVPM_HOME']}/design"
-
-    os.environ["DV_SVLIB_PATH"] = f"{CORE_V_VERIF}/{CV_CORE_LC}/vendor_lib/verilab"
-
-    # TB source files for the CV32E core
-    TBSRC_HOME = f"{CORE_V_VERIF}/{CV_CORE_LC}/tb"
-    os.environ["TBSRC_HOME"] = TBSRC_HOME
-
-    # RTL source files for the CV32E core
-    # DESIGN_RTL_DIR is used by CV32E40P_MANIFEST file
-    CV_CORE_PKG = CORE_RTL_PATH
-    CV_CORE_MANIFEST = f"{CV_CORE_PKG}/{CV_CORE_LC}_manifest.flist"
-    os.environ["DESIGN_RTL_DIR"] = f"{CV_CORE_PKG}/rtl"
-
-    # additional_filelist += f"-f {CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif/src/uvma_cvxif_pkg.flist "
     
-    if args.cop:
-        os.environ["RVV_PATH"] = f"{CV_CORE_PKG}/../xcs"
-        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
+    config.export_env()
 
+    # Switch branch depending on the presence of the coprocessor and data mover
+    if args.cop:
         additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/xcs/coproc.fl "
         
         rtl_commit = RTL_COP_COMMIT
@@ -276,111 +182,81 @@ if __name__ == "__main__":
         additional_filelist += f"-f {CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif/src/uvma_cvxif_pkg.flist "
 
     if args.dmv:
-        os.environ["DSL_PATH"] = f"{CV_CORE_PKG}/../xcs/src/dsl"
-        os.environ["DMV_PATH"] = f"{CV_CORE_PKG}/../lsu"
-
         additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/lsu/datamover.fl "
 
-
-    os.environ["DPI_DASM_ROOT"] = "{CORE_V_VERIF}/lib/dpi_dasm"
-
-    ## DRI DEFINITION
+    ## OUT DIR DEFINITION
     # The output root directory for the compilation and simulation
-    if args.out_dir:
-        out_dir = args.out_dir
-        if not os.path.exists(out_dir):
-            os.makedirs(out_dir)
-    else:    
-        out_dir = (
-            os.path.join(CORE_V_VERIF, "log")
-            if not args.skip_testcase_comp
-            else Path(args.program).parent / "log"
-        )
+    OUT_DIR = config.OUT_DIR
+    if not os.path.exists(OUT_DIR):
+        os.makedirs(OUT_DIR)
 
-    program_name = args.program
-
-    vcs_out_dir      = os.path.join(out_dir, "default", "vcs_results")
-    core_dv_dir      = os.path.join(out_dir, "default", "corev-dv")
-    csrc_dir         = os.path.join(vcs_out_dir, "csrc")
-    test_program_dir = os.path.join(vcs_out_dir, "default", program_name, "0", "test_program")
-    bsp_dir          = os.path.join(test_program_dir, "bsp")
+    vcs_out_dir      = config.VCS_OUT_DIR
+    core_dv_dir      = config.CORE_DV_DIR
+    csrc_dir         = config.CSRC_DIR
+    test_program_dir = config.TEST_PROGRAM_DIR
+    bsp_dir          = config.BSP_DIR
     
+    # Create the output directories if they do not exist
+    for dir_path in [core_dv_dir, csrc_dir, bsp_dir]:
+        os.makedirs(dir_path, exist_ok=True)
+        print(f"\033[93mCreated directory: {dir_path}\033[0m")
+
     # If the program is a path, extract the program name
     program_path = Path(args.program)
     if program_path.is_absolute() or program_path.parent != Path('.'):
-        print("BRANCH0")
-        elf_file = Path(args.program).parent / f"{Path(args.program).name}"
-        hex_file = Path(args.program).parent / f"{Path(args.program).stem}.hex"
-        itb_file = Path(args.program).parent / f"{Path(args.program).stem}.itb"
-        program_name = Path(elf_file).stem
-        test_program_dir = (
-            Path(vcs_out_dir) / "default" / program_name / "0" / "test_program"
-        )
-        bsp_dir = test_program_dir / "bsp"
-        test_program_dir.mkdir(parents=True, exist_ok=True)
-        for file in [elf_file, hex_file, itb_file]:
-            # copy the file to the test_program_dir
-            shutil.copy(file, test_program_dir)
+        raise RuntimeError("Program path is absolute or not in current directory. Please check the input.")
+        # print("BRANCH0")
+        # elf_file = Path(args.program).parent / f"{Path(args.program).name}.elf"
+        # hex_file = Path(args.program).parent / f"{Path(args.program).stem}.hex"
+        # itb_file = Path(args.program).parent / f"{Path(args.program).stem}.itb"
+        # program = Path(elf_file).stem
+        # test_program_dir = (
+        #     Path(vcs_out_dir) / "default" / program / "0" / "test_program"
+        # )
+        # bsp_dir = test_program_dir / "bsp"
+        # test_program_dir.mkdir(parents=True, exist_ok=True)
+        # for file in [elf_file, hex_file, itb_file]:
+        #     # copy the file to the test_program_dir
+        #     shutil.copy(file, test_program_dir)
     else:
-        elf_file = Path(test_program_dir) / f"{program_name}.elf"
-        hex_file = Path(test_program_dir) / f"{program_name}.hex"
-        itb_file = Path(test_program_dir) / f"{program_name}.itb"
+        elf_file = Path(test_program_dir) / f"{program}.elf"
+        hex_file = Path(test_program_dir) / f"{program}.hex"
+        itb_file = Path(test_program_dir) / f"{program}.itb"
 
-    if not os.path.exists(core_dv_dir):
-        os.makedirs(core_dv_dir)
-    if not os.path.exists(csrc_dir):
-        os.makedirs(csrc_dir)
-    if not os.path.exists(bsp_dir):
-        os.makedirs(bsp_dir)
+    # VCS compile flags setup
+    vcs_compile_flags = " ".join(config.VCS_COMPILE_FLAGS)
 
-    ## VCS define is needed for the ifdef in the AXI crossbar
-    vcs_defines = "+define+VCS +define+GNT "
-    # vcs_defines += "+define+__UVMT_CV32E20_TB_SV__ "  # NOTE: we define __UVMT_CV32E20_TB_SV__ so that the top module of the OpenHW is not compiled, we want to compile our own top module
-    # vcs_defines += "+define+__UVMT_CV32E20_DUT_WRAP_SV__ "  # NOTE: we define __UVMT_CV32E20_DUT_WRAP_SV__ so we avoid compiling the cor wrapper of OpenHW, which we do not use
-    CXR_VERSION_DEFINE = "+define+BASE"
+    # Add uvmc_rvfi_decoder_pkg.sv to include path and file list
+    vcs_compile_flags += f" +incdir+{DV_UVMC_RVFI_REFERENCE_MODEL_DIR} {DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH} "
 
-    # mkdir {CORE_V_VERIF}/log/ &&  \
-    args_define = f"+define+{args.define}"
-    vcs_compile_flags = "+define++define+CV32E20_RVFI+RVFI +define+CV32E20_TRACE_EXECUTION +USE_ISS -lca -sverilog +define+CV32E20_ASSERT_ON -ntb_opts uvm-1.2 -timescale=1ns/1ps -assert svaext -race=all -ignore unique_checks -full64 -reportstats -notice -line -fgp=multisocket +define+UVM"
-
-    # Find absolute path of uvmc_rvfi_decoder_pkg.sv
-    decoder_pkg_path = os.path.join(DV_UVMC_RVFI_REFERENCE_MODEL_PATH, "uvmc_rvfi_decoder_pkg.sv")
-
-    # Add path in uvmc_rvfi_decoder_pkg.sv's directory to +incdir
-    vcs_compile_flags += f" +incdir+{os.path.dirname(decoder_pkg_path)} "
-
-    # Directly include the file uvmc_rvfi_decoder_pkg.sv into the build
-    vcs_compile_flags += f" {decoder_pkg_path} "
-    
-
-    optional_flags = "-suppress=PCTI-L -suppress=UII-L -kdb=common_elab -debug_acc+all -debug_region+cell+encrypt -fgp=num_threads:8 -fgp=auto_affinity:allowHyperThreadCpu +gc+high_threshold+5 +UVM_NO_RELNOTES"
+    vcs_compile_flags += sv_comp_define
 
     ###################################################################
     ################ SELECT THE CRT0 AND LINKER #######################
     ###################################################################
-    if program_name == "riscv_arithmetic_basic_test_0":
+    if program == "riscv_arithmetic_basic_test_0":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/riscv_arithmetic_basic_test_0/riscv_arithmetic_basic_test_0.S"
-    elif program_name == "simple_cv_addsub_test":
+    elif program == "simple_cv_addsub_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_addsub_test/simple_cv_addsub_test.S"
-    elif program_name == "simple_cv_addsubls3_test":
+    elif program == "simple_cv_addsubls3_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_addsubls3_test/simple_cv_addsubls3_test.S"
-    elif program_name == "simple_cv_clip_test":
+    elif program == "simple_cv_clip_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_clip_test/simple_cv_clip_test.S"
-    elif program_name == "simple_cv_cmpsimd_test":
+    elif program == "simple_cv_cmpsimd_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_cmpsimd_test/simple_cv_cmpsimd_test.S"
-    elif program_name == "simple_cv_dotpsimd_test":
+    elif program == "simple_cv_dotpsimd_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_dotpsimd_test/simple_cv_dotpsimd_test.S"
-    elif program_name == "simple_cv_genalu_test":
+    elif program == "simple_cv_genalu_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_genalu_test/simple_cv_genalu_test.S"
-    elif program_name == "simple_cv_gensimd_test":
+    elif program == "simple_cv_gensimd_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_gensimd_test/simple_cv_gensimd_test.S"
-    elif program_name == "simple_cv_mac32_test":
+    elif program == "simple_cv_mac32_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_mac32_test/simple_cv_mac32_test.S"
-    elif program_name == "simple_cv_mac168_test":
+    elif program == "simple_cv_mac168_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_mac168_test/simple_cv_mac168_test.S"
-    elif program_name == "simple_cv_mul168_test":
+    elif program == "simple_cv_mul168_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_mul168_test/simple_cv_mul168_test.S"          
-    elif program_name == "simple_cv_postinc_load_store_test":
+    elif program == "simple_cv_postinc_load_store_test":
         crt0_path = f"{CORE_V_VERIF}/cv32e20/tests/programs/custom/simple_cv_postinc_load_store_test/simple_cv_postinc_load_store_test.S" 
     else:
         crt0_path = f"{CORE_TB_PATH}/bsp/crt0.S"
@@ -398,33 +274,33 @@ if __name__ == "__main__":
     # if uvm_test_name == "rec_tb_cor_axi_test_drive_both_computeram_no_fw_preload":
     #     crt0_path = f"{CORE_V_VERIF}/design/top/rec/scripts/c/dram_system/crt0.S"
 
-    if program_name in ["hello-world", "fibonacci", "csr_instructions", "branch_zero", "dhrystone"]:
-        c_files = f"{CORE_TB_PATH}/tests/programs/custom/{program_name}/{program_name}.c"
-    elif program_name == "coremark":
+    if program in ["hello-world", "fibonacci", "csr_instructions", "branch_zero", "dhrystone"]:
+        c_files = f"{CORE_TB_PATH}/tests/programs/custom/{program}/{program}.c"
+    elif program == "coremark":
         c_files = f"-DITERATIONS=1 \
             -DVALIDATION_RUN=1 \
             -DFLAGS_STR='\"-Os -g -static -mabi=ilp32 -march={march} -Wall -pedantic\"' \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/coremark.h \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_portme.h \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_portme.c \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_list_join.c \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_state.c \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_util.c\
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_matrix.c \
-            {CORE_TB_PATH}/tests/programs/custom/{program_name}/core_main.c"
-    elif program_name == "test_read_write":
+            {CORE_TB_PATH}/tests/programs/custom/{program}/coremark.h \
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_portme.h \
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_portme.c \
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_list_join.c \
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_state.c \
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_util.c\
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_matrix.c \
+            {CORE_TB_PATH}/tests/programs/custom/{program}/core_main.c"
+    elif program == "test_read_write":
         linker_script = f"{CORE_V_VERIF}/design/top/rec/scripts/c/link_big_heap.ld"
         c_files = f"{CORE_V_VERIF}/CxR_tests/stream_read_write.cc \
             {CORE_V_VERIF}/CxR_tests/computeram.c \
             {CORE_V_VERIF}/CxR_tests/hardware_tests_utils.cc \
             {CORE_V_VERIF}/CxR_tests/chip_config.c"
-    elif program_name == "test_trigger_compute":
+    elif program == "test_trigger_compute":
         linker_script = f"{CORE_V_VERIF}/design/top/rec/scripts/c/link_big_heap.ld"
         c_files = f"{CORE_V_VERIF}/CxR_tests/trigger_compute.cc \
             {CORE_V_VERIF}/CxR_tests/computeram.c \
             {CORE_V_VERIF}/CxR_tests/hardware_tests_utils.cc \
             {CORE_V_VERIF}/CxR_tests/chip_config.c"
-    elif program_name == "simple_test":
+    elif program == "simple_test":
         linker_script = f"{CORE_V_VERIF}/design/top/rec/scripts/c/link_big_heap.ld"
         c_files = f"{CORE_V_VERIF}/CxR_tests/simple_test.cc \
             {CORE_V_VERIF}/CxR_tests/computeram.c \
@@ -432,7 +308,7 @@ if __name__ == "__main__":
             {CORE_V_VERIF}/CxR_tests/chip_config.c"
     else:
         c_files = ""
-        print(f"Program {program_name} not found. Assuming it is a precompiled program.")
+        print(f"Program {program} not found. Assuming it is a precompiled program.")
 
     if args.ld:
         linker_script = args.ld
@@ -472,14 +348,13 @@ if __name__ == "__main__":
     # With this dictionary you will format the commands
     fmt_dict = {
         "CORE_V_VERIF": CORE_V_VERIF,
-        "CORE_V_VERIF": CORE_V_VERIF,
         "VCS_HOME": VCS_HOME,
         "RISCV_OPCODES_DIR": RISCV_OPCODES_DIR,
         "cv_core": cv_core,
         "CORE_RTL_PATH": CORE_RTL_PATH,
         "CORE_TB_PATH": CORE_TB_PATH,
         "RISCV_EXE_PREFIX": RISCV_EXE_PREFIX,
-        "DV_UVMC_RVFI_REFERENCE_MODEL_PATH": DV_UVMC_RVFI_REFERENCE_MODEL_PATH,
+        "DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH": DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH,
         "GCC": GCC,
         "GXX": GCC,
         "march": march,
@@ -487,16 +362,11 @@ if __name__ == "__main__":
         "csrc_dir": csrc_dir,
         "vcs_out_dir": vcs_out_dir,
         "vcs_compile_flags": vcs_compile_flags,
-        "vcs_defines": vcs_defines,
-        "CXR_VERSION_DEFINE": CXR_VERSION_DEFINE,
-        "args_define": args_define,
-        "test_define": test_define,
         "kdb": kdb,
-        "optional_flags": optional_flags,
         "bsp_dir": bsp_dir,
         "crt0_path": crt0_path,
         "test_program_dir": test_program_dir,
-        "program_name": program_name,
+        "program": program,
         "c_files": c_files,
         "linker_script": linker_script,
         "scoreboard_enable": scoreboard_enable,
@@ -539,40 +409,54 @@ if __name__ == "__main__":
 
     autogen_cmd = fmt.autogen_cmd.format(**fmt_dict)
 
-    sw_cmd_dict = {
+    ###################################################################
+    ################ CREATE THE COMMAND DICT    #######################
+    ###################################################################
+    
+    # These are always executed
+    cmd_dict = {
         "rtl_git_cmd": rtl_git_cmd,
         "tb_git_cmd": tb_git_cmd,
-        "bsp_compile_cmd": bsp_compile_cmd,
         "parse_cmd": parse_cmd,
         "autogen_cmd": autogen_cmd
     }
 
-    ###################################################################
-    ################ CREATE THE COMMAND DICT    #######################
-    ###################################################################
-    if args.bsp_only:
-        args.sw_only = True
-    elif args.skip_testcase_comp:
-        sw_cmd_dict |= {
-            # "google_compile_cmd": google_compile_cmd,
-            "dpi_compile_cmd": dpi_compile_cmd,
-        }
-    else:
-        sw_cmd_dict |= {
-            # "google_compile_cmd": google_compile_cmd,
+    if args.sw_compile_only:
+        cmd_dict |= {
+            "bsp_compile_cmd": bsp_compile_cmd,
             "dpi_compile_cmd": dpi_compile_cmd,
             "test_program_compile_cmd": test_program_compile_cmd,
             "hex_compile_cmd": hex_compile_cmd,
         }
-        
+    if args.sw_compile_only_bsp:
+        cmd_dict |= {
+            "bsp_compile_cmd": bsp_compile_cmd
+        }
+    elif args.rtl_only:
+        cmd_dict |= {
+            "sv_compile_cmd": sv_compile_cmd, 
+            "sv_sim_cmd": sv_sim_cmd
+        }
+    elif args.rtl_compile_only:
+        cmd_dict |= {
+            "sv_compile_cmd": sv_compile_cmd
+        }
+    else:
+        cmd_dict |= {
+            "bsp_compile_cmd": bsp_compile_cmd,
+            "dpi_compile_cmd": dpi_compile_cmd,
+            "test_program_compile_cmd": test_program_compile_cmd,
+            "hex_compile_cmd": hex_compile_cmd,
+            "sv_compile_cmd": sv_compile_cmd, 
+            "sv_sim_cmd": sv_sim_cmd
+        }
+
     # If the folder has not been built, this command is added at the beginning of the sw_cmd_dict
     # in order to build the folder before compiling the SW. The verilab folder will be filled with Spike files
     if not os.path.exists(VERILAB_DIR):
         sw_cmd_dict = {"build_folder_cmd": build_folder_cmd, **sw_cmd_dict}
 
-    hw_cmd_dict = {"sv_compile_cmd": sv_compile_cmd, "sv_sim_cmd": sv_sim_cmd}
-
-    for cmd_idx, (key, cmd) in enumerate(sw_cmd_dict.items()):
+    for cmd_idx, (key, cmd) in enumerate(cmd_dict.items()):
         print("\n**********************************************************")
         print(f"{key}:\n{cmd}")
         print("**********************************************************")
@@ -583,24 +467,3 @@ if __name__ == "__main__":
         if process.returncode != 0:
             print("\033[91m" + f"Error occurred in {key}. Exiting..." + "\033[0m")
             exit()
-
-    if args.sw_only:
-        exit()
-        
-    for cmd_idx, (key, cmd) in enumerate(hw_cmd_dict.items()):
-
-        if args.compile_only and key == "sv_sim_cmd":
-            print("\n**********************************************************")
-            print(f"SKIPPING command {key} due to flag --compile-only")
-            print("**********************************************************")
-        else:
-            print("\n**********************************************************")
-            print(f"{key}:\n{cmd}")
-            print("**********************************************************")
-
-            process = subprocess.Popen(cmd, shell=True)
-            process.wait()
-
-            if process.returncode != 0:
-                print("\033[91m" + f"Error occurred in {key}. Exiting..." + "\033[0m")
-                exit()
