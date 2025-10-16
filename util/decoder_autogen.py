@@ -8,6 +8,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--set_clock", action = "store_true", help="Set the clock to the model")
 parser.add_argument("--set_while", action="store_true", help="Set the while loop in the model")
+parser.add_argument("--instantiate_cvxif", action="store_true", help="Instantiate the cvx interface")
 args = parser.parse_args()
 
 if args.set_clock:
@@ -124,13 +125,13 @@ def reorder_casez_dict(casez_dict: dict, priority_path: str) -> dict:
 #                                                   MAIN                                                         #
 #                                                                                                                #
 ##################################################################################################################
-config_json = 'config.json' 
-instr_dict_json = '../riscv-opcodes/instr_dict.json'
-impl_dict_json = 'impl_dict.json'
-input_file = '../lib/uvm_components/uvmc_rvfi_reference_model/uvmc_rvfi_decoder_pkg.sv'
-# output_file = 'opcode_case_class.sv'
-arg_lut_file = '../riscv-opcodes/arg_lut.csv'
-opcode_priority = "opcode_priority.json"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+config_json = os.path.join(script_dir, 'config.json')
+instr_dict_json = os.path.join(script_dir, os.path.pardir, 'riscv-opcodes', 'instr_dict.json')
+impl_dict_json = os.path.join(script_dir, 'impl_dict.json')
+input_file = os.path.join(script_dir, os.path.pardir, 'lib', 'uvm_components', 'uvmc_rvfi_reference_model', 'uvmc_rvfi_decoder_pkg.sv')
+arg_lut_file = os.path.join(script_dir, os.path.pardir, 'riscv-opcodes', 'arg_lut.csv')
+opcode_priority = os.path.join(script_dir, "opcode_priority.json")
 
 
 only_variable_fields = dict()  #Dictionary which will contain key = instruction's name and val = variable fields
@@ -509,7 +510,6 @@ else:
     //endfunction : write_rvfi_instr
 """
 
-#This block is used to fill the rvfi_instr_seq_item with the values extracted from the instruction
 rvfi_block = f"""
 
 {INDENT_TWO}rvfi_instr_seq_item.order     = order++;
@@ -522,7 +522,9 @@ rvfi_block = f"""
 {INDENT_TWO}rvfi_instr_seq_item.rd1_wdata = reg_file[rd];
 {INDENT_TWO}rvfi_instr_seq_item.pc_rdata  = pc_before;
 {INDENT_TWO}rvfi_instr_seq_item.pc_wdata  = pc;
+"""
 
+cvx_block = f"""
 {INDENT_TWO}if(is_cv_instr) begin
 {INDENT_THREE}cvx_instr_req_item.issue_req.instr = instr;
 {INDENT_THREE}//cvx_instr_req_item.commit_req.commit_kill = commit_kill;
@@ -545,9 +547,43 @@ rvfi_block = f"""
 {INDENT_THREE}m_ap_cvxif_resp.write(cvx_instr_resp_item);
 {INDENT_THREE}m_ap_cvxif_req.write(cvx_instr_req_item);
 {INDENT_TWO}end
-
 """
 
+rvfi_seq_item_def = f"""
+{INDENT_ONE}uvma_rvfi_instr_seq_item_c#(32, 32) rvfi_instr_seq_item;
+"""
+
+cvx_seq_item_def = f"""
+{INDENT_ONE}uvma_cvxif_resp_item_c cvx_instr_resp_item;
+{INDENT_ONE}uvma_cvxif_req_item_c cvx_instr_req_item;
+"""
+
+rvfi_seq_item_assign = f"""
+{INDENT_ONE}rvfi_instr_seq_item = uvma_rvfi_instr_seq_item_c#(32,32)::type_id::create("rvfi_instr_seq_item", this);
+"""
+
+cvx_seq_item_assign = f"""
+{INDENT_ONE}cvx_instr_resp_item = uvma_cvxif_resp_item_c::type_id::create("cvx_instr_resp_item", this);
+{INDENT_ONE}cvx_instr_req_item = uvma_cvxif_req_item_c::type_id::create("cvx_instr_req_item", this);
+"""
+
+def get_rvfi_block(cvx_if_present: bool) -> str:
+    if cvx_if_present:
+        return rvfi_block + cvx_block
+    else:
+        return rvfi_block
+
+def get_seq_item_def(cvx_if_present: bool) -> str:
+    if cvx_if_present:
+        return rvfi_seq_item_def + cvx_seq_item_def
+    else:
+        return rvfi_seq_item_def
+
+def get_seq_item_assign(cvx_if_present: bool) -> str:
+    if cvx_if_present:
+        return rvfi_seq_item_assign + cvx_seq_item_assign
+    else:
+        return rvfi_seq_item_assign
 
 #Class template to be formatted
 template_content = """
@@ -597,9 +633,7 @@ class {class_name} extends {main_class};
     bit is_cv_instr;
 
 
-    uvma_rvfi_instr_seq_item_c#(32, 32) rvfi_instr_seq_item;
-    uvma_cvxif_resp_item_c cvx_instr_resp_item;
-    uvma_cvxif_req_item_c cvx_instr_req_item;
+    {seq_item_def}
     `uvm_component_utils_begin({class_name})
     `uvm_component_utils_end
 
@@ -646,9 +680,7 @@ class {class_name} extends {main_class};
 
     function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) decode_opcode(bit[{instr_width}-1:0] instr);
 
-        rvfi_instr_seq_item = uvma_rvfi_instr_seq_item_c#(32,32)::type_id::create("rvfi_instr_seq_item", this);
-        cvx_instr_resp_item = uvma_cvxif_resp_item_c::type_id::create("cvx_instr_resp_item", this);
-        cvx_instr_req_item = uvma_cvxif_req_item_c::type_id::create("cvx_instr_req_item", this);
+        {seq_item_assign}
 
         rvfi_instr_seq_item.mode = mode;
 
@@ -694,12 +726,19 @@ casez_string = casez_fmt.format(
     **casez_dict,
 )
 
-file_content = template_content.format(casez_string=casez_string,**values, fields_variables=field_block, constructor_code=while_code, run_phase_code=clock_code, step_code=step_code, rvfi_block=rvfi_block)
+file_content = template_content.format(casez_string=casez_string,**values, 
+                                       fields_variables=field_block, 
+                                       constructor_code=while_code, 
+                                       run_phase_code=clock_code, 
+                                       step_code=step_code, 
+                                       rvfi_block=get_rvfi_block(args.instantiate_cvxif), 
+                                       seq_item_def=get_seq_item_def(args.instantiate_cvxif), 
+                                       seq_item_assign=get_seq_item_assign(args.instantiate_cvxif))
 
 
 
 #Writing the formatted content to the sysverilog class
-directory = "../lib/uvm_components/uvmc_rvfi_reference_model"
+directory = os.path.join(script_dir, "..", "lib", "uvm_components", "uvmc_rvfi_reference_model")
 
 output_file = os.path.join(directory, config["name"] + ".sv")
 
