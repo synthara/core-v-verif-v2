@@ -28,8 +28,7 @@ import uvma_cvxif_pkg::*;
  * Scoreboard component which compares CVXIF transactions comming from the
  * core and the reference model
  */
-class uvmc_cvxif_scoreboard_c#(int ILEN=DEFAULT_ILEN,
-                                  int XLEN=DEFAULT_XLEN) extends uvm_scoreboard;
+class uvmc_cvxif_scoreboard_c extends uvm_scoreboard;
 
    uvm_analysis_imp_cvx_resp_rtl#(uvma_cvxif_resp_item_c, uvmc_cvxif_scoreboard_c) m_imp_cvxif_resp_rtl;
    uvm_analysis_imp_cvx_resp_ref_model#(uvma_cvxif_resp_item_c, uvmc_cvxif_scoreboard_c) m_imp_cvxif_resp_ref_model;

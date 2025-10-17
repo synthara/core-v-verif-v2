@@ -4,7 +4,7 @@
 import uvma_cvxif_pkg::*;
 class uvme_cv32e20_sb_with_cvxif_c extends uvme_cv32e20_sb_c;
 
-    uvmc_cvxif_scoreboard_c#(ILEN, uvme_cv32e20_pkg::XLEN) m_cvxif_scoreboard;
+    uvmc_cvxif_scoreboard_c m_cvxif_scoreboard;
 
     `uvm_component_utils_begin(uvme_cv32e20_sb_with_cvxif_c)
         `uvm_field_object(cfg, UVM_DEFAULT)
@@ -20,7 +20,7 @@ class uvme_cv32e20_sb_with_cvxif_c extends uvme_cv32e20_sb_c;
     function void create_sbs();
         super.create_sbs();
 
-        m_cvxif_scoreboard = uvmc_cvxif_scoreboard_c#(ILEN, uvme_cv32e20_pkg::XLEN)::type_id::create("m_cvxif_scoreboard", this);
+        m_cvxif_scoreboard = uvmc_cvxif_scoreboard_c::type_id::create("m_cvxif_scoreboard", this);
 
     endfunction: create_sbs
 
