@@ -187,7 +187,7 @@ if __name__ == "__main__":
     if not args.out_dir:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         username = getpass.getuser()
-        args.out_dir = os.path.join("scratch", username, "riscv_uvm_model", "perf_analyzer", timestamp)
+        args.out_dir = os.path.join("/", "scratch", username, "riscv_uvm_model", "perf_analyzer", timestamp)
 
         print(f"\033[93mNo output directory specified. Using default: {args.out_dir}\033[0m")
         
