@@ -161,7 +161,7 @@ cd {vcs_out_dir} &&  \
 {additional_filelist} \
 -f {CORE_RTL_PATH}/cv32e20_manifest.flist \
 -f {CORE_TB_PATH}/tb/uvmt/uvmt_cv32e20.flist \
-{CORE_V_VERIF}/riscv_uvm_model/uvmt/uvmt_cv32e20_model_test.sv \
+-f {CORE_V_VERIF}/riscv_uvm_model/uvmt/uvmt_cv32e20_uvm_model_pkg.flist \
 -top uvmt_{cv_core}_tb \
 -l vcs.log
 """
