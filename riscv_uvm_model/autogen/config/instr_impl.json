@@ -117,7 +117,7 @@
       "impl": "reg_rs1_prev = reg_file[rs1];\n\t\t\t\treg_rs2_prev = reg_file[rs2];\n\t\t\t\tif (rd != 0) begin\n\t\t\t\t\treg_file[rd] = csr_reg_file[csr];\n\t\t\t\tend\n\t\t\t\tcsr_reg_file[csr] = reg_rs1_prev;"
   },
   "csrrs": {
-      "impl": "reg_rs1_prev = reg_file[rs1];\n\t\t\t\treg_rs2_prev = reg_file[rs2];\n\t\t\t\treg_file[rd] = csr_reg_file[csr];\n\t\t\t\tif (rs1 != 0) begin\n\t\t\t\t\tcsr_reg_file[csr] = csr_reg_file[csr] | reg_rs1_prev;\n\t\t\t\tend"
+      "impl": "reg_rs1_prev = reg_file[rs1];\n\t\t\t\treg_rs2_prev = reg_file[rs2];\n\t\t\t\treg_file[rd] = csr_reg_file[csr];\n\t\t\t\tif (rs1 != 0) begin\n\t\t\t\t\tcsr_reg_file[csr] = csr_reg_file[csr] | reg_rs1_prev;\n\t\t\t\tend\n\t\t\t\t//$display(\"rd:%h\", reg_file[rd]);\n\t\t\t\t//$display(\"csr:%h\", csr_reg_file[csr]);"
   },
   "csrrc": {
       "impl": "reg_rs1_prev = reg_file[rs1];\n\t\t\t\treg_rs2_prev = reg_file[rs2];\n\t\t\t\treg_file[rd] = csr_reg_file[csr];\n\t\t\t\tif (rs1 != 0) begin\n\t\t\t\t\tcsr_reg_file[csr] = csr_reg_file[csr] & ~reg_rs1_prev;\n\t\t\t\tend"
@@ -806,10 +806,10 @@
       "impl": "reg_rs1_prev = reg_file[rs1];\n\t\t\t\treg_rs2_prev = reg_file[rs2];\n\t\t\t\tif (reg_file[rs2] == 0) begin\n\t\t\t\t\treg_file[rd] = 32'hFFFFFFFF;\n\t\t\t\tend else begin\n\t\t\t\t\treg_file[rd] = reg_file[rs1] / reg_file[rs2];\n\t\t\t\tend"
   },
   "ebreak": {
-      "impl": "csr_reg_file[12'h341] = pc;    //mepc\n\t\t\t\tcsr_reg_file[12'h342] = 32'd3;    //mcause\n\t\t\t\tcsr_reg_file[12'h343] = 32'd0;    //mtval\n\t\t\t\tcsr_reg_file[12'h300][12:11] = 2'b11;                   // MPP\n\t\t\t\tcsr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];// MPIE = MIE\n\t\t\t\tcsr_reg_file[12'h300][3]     = 1'b0;                    // MIE = 0\n\t\t\t\tpc   = csr_reg_file[12'h305] & 32'hFFFF_FFFC;\n\t\t\t\tincr = 0;"
+      "impl": "csr_reg_file[12'h341] = pc;    //mepc\n\t\t\t\tcsr_reg_file[12'h342] = 32'd3;    //mcause\n\t\t\t\tcsr_reg_file[12'h343] = 32'd0;    //mtval\n\t\t\t\tcsr_reg_file[12'h300][12:11] = 2'b11;                   // MPP\n\t\t\t\tcsr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];// MPIE = MIE\n\t\t\t\tcsr_reg_file[12'h300][3]     = 1'b0;                    // MIE = 0\n\t\t\t\tpc   = csr_reg_file[12'h305] & 32'hFFFF_FFFC;\n\t\t\t\trvfi_instr_seq_item.trap = 1'b1;\n\t\t\t\tincr = 0;"
   },
   "ecall": {
-      "impl": "csr_reg_file[12'h341] = pc;        // mepc <- indirizzo dell'istruzione\n\t\t\t\tcsr_reg_file[12'h342] = 32'd11;    // mcause <- Environment call from M-mode\n\t\t\t\tcsr_reg_file[12'h343] = 32'd0;     // mtval <- 0\n\t\t\t\tcsr_reg_file[12'h300][12:11] = 2'b11;                   // MPP = M\n\t\t\t\tcsr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];// MPIE = MIE\n\t\t\t\tcsr_reg_file[12'h300][3]     = 1'b0;                    // MIE = 0\n\t\t\t\tpc   = csr_reg_file[12'h305] & 32'hFFFF_FFFC;\n\t\t\t\tincr = 0;"
+      "impl": "csr_reg_file[12'h341] = pc;        // mepc <- indirizzo dell'istruzione\n\t\t\t\tcsr_reg_file[12'h342] = 32'd11;    // mcause <- Environment call from M-mode\n\t\t\t\tcsr_reg_file[12'h343] = 32'd0;     // mtval <- 0\n\t\t\t\tcsr_reg_file[12'h300][12:11] = 2'b11;                   // MPP = M\n\t\t\t\tcsr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];// MPIE = MIE\n\t\t\t\tcsr_reg_file[12'h300][3]     = 1'b0;                    // MIE = 0\n\t\t\t\tpc   = csr_reg_file[12'h305] & 32'hFFFF_FFFC;\n\t\t\t\trvfi_instr_seq_item.trap = 1'b1;\n\t\t\t\tincr = 0;"
   },
   "fence": {
       "impl": "// In a single-core model, the FENCE instruction has no observable effect and is treated as a no-operation"
@@ -911,7 +911,7 @@
       "impl": "reg_rs1_prev = reg_file[rs1];\n\t\t\t\treg_rs2_prev = reg_file[rs2];\n\t\t\t\timm12_ext = {{20{imm12[11]}}, imm12};\n\t\t\t\treg_file[rd] = reg_file[rs1] ^ imm12_ext;"
   },
   "mret": {
-      "impl": "// mret: return from machine mode exception\n\t\t\t\tpc = csr_reg_file[12'h341]; // mepc CSR\n\t\t\t\tincr = 0;"
+      "impl": "// mret: return from machine mode exception\n\t\t\t\tpc = csr_reg_file[12'h341]; // mepc CSR\n\t\t\t\tincr = 0;\t\t\t\t$display(\"'%h\", pc);"
   },
   "wfi": {
       "impl": "// wfi: wait for interrupt (treated as no-op in this model, it also sets the end of the simulation)\n\t\t\t\tincr = 0;\n\t\t\t\trvfi_instr_seq_item.halt = 1;"

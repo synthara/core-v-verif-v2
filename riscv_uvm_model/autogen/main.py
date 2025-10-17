@@ -601,6 +601,7 @@ class {class_name} extends {main_class};
     int order = 0;
 
     virtual uvma_clknrst_if clknrst_vif;
+    virtual uvma_interrupt_if interrupt_vif;
     uvma_rvfi_mode mode = 3;
 
     {fields_variables}
@@ -631,6 +632,16 @@ class {class_name} extends {main_class};
     bit [31:0] lpend[1:0];
     bit [31:0] lpcount[1:0];
     bit is_cv_instr;
+    static bit [31:0] MIP_MASK = 32'h0000_0888;
+    bit take_nmi;         
+    bit mie_global;
+    logic [31:0] pend;
+    logic [31:0] pend_now;
+    logic [31:0] base;
+    int cause;
+    bit trap_armed;
+    int trap_cause_latched;
+    int next_cause = -1;
 
 
     {seq_item_def}
@@ -656,6 +667,7 @@ class {class_name} extends {main_class};
         csr_reg_file[12'hF12] = 32'h00000023; // marchid
         csr_reg_file[12'hF13] = 32'h00000000; // mimpid
         csr_reg_file[12'h300] = 32'h00001800; // mstatus
+        csr_reg_file[12'h344] = 32'h00000000; // mip
 
     endfunction : new
 
@@ -672,6 +684,11 @@ class {class_name} extends {main_class};
         end else begin
             `uvm_fatal("BOOT_ADDR not valid, using default value", UVM_MEDIUM)
         end
+        if (!uvm_config_db#(virtual uvma_interrupt_if)::get(
+            null, "*.env", "intr_vif", interrupt_vif)) begin
+            `uvm_fatal("NOINT", "Cannot get interrupt_vif from config_db")
+        end
+
         {constructor_code}
     endfunction : build_phase
 
@@ -684,15 +701,101 @@ class {class_name} extends {main_class};
 
         rvfi_instr_seq_item.mode = mode;
 
+        
+        take_nmi         = interrupt_vif.irq[0];         // NMI ignora mstatus/mie
+        mie_global       = csr_reg_file[12'h300][3];      // mstatus.MIE
+
+        pend    = csr_reg_file[12'h344] & csr_reg_file[12'h304];
+
         incr = 4;
 
-        is_cv_instr = 1'b0;
+        csr_reg_file[12'h344] = (csr_reg_file[12'h344] & ~MIP_MASK)
+                | (interrupt_vif.irq & MIP_MASK);
 
-        pc_before = pc;
+
+        is_cv_instr = 1'b0;
 
         rs1 = 5'b0;
         rs2 = 5'b0;
         rd  = 5'b0;
+
+        
+        csr_reg_file[12'h344][3]  = interrupt_vif.irq[3];    // MSIP
+        csr_reg_file[12'h344][7]  = interrupt_vif.irq[7];    // MTIP
+        csr_reg_file[12'h344][11] = interrupt_vif.irq[11];   // MEIP
+        for (int i = 16; i <= 30; i++) begin
+            csr_reg_file[12'h344][i] = interrupt_vif.irq[i];   // fast[14:0]
+        end
+
+
+
+    if (trap_armed) begin
+        base  = csr_reg_file[12'h305] & 32'hFFFF_FFFC;
+
+        csr_reg_file[12'h341]        = pc;                               // mepc = next PC
+        csr_reg_file[12'h342]        = {{1'b1, trap_cause_latched[30:0]}}; // mcause[31]=1
+        $display("dio del dio %h", csr_reg_file[12'h342]);
+        csr_reg_file[12'h343]        = '0;                               // mtval=0
+        csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];         // MPIE <- MIE
+        csr_reg_file[12'h300][3]     = 1'b0;                             // MIE  <- 0
+        csr_reg_file[12'h300][12:11] = 2'b11;                            // MPP  <- M
+
+        pc = base + (trap_cause_latched << 2); // vectored per gli IRQ
+        $display("pc: %h", pc);
+        instr = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
+        trap_armed = 1'b0;
+    end
+
+            pc_before = pc;
+
+
+
+        //pend_now = csr_reg_file[12'h344] & csr_reg_file[12'h304];
+
+        // PATCH #3: detect & take interrupt (vectored), poi refetch al vettore
+
+
+
+//if (interrupt_vif.irq[31]) begin
+  //trap_armed         = 1'b1;
+  //trap_cause_latched = 31;     // NMI
+//end
+//else if (!trap_armed && mie_global) begin
+  //int c = -1;
+  //// priorità fast: ID più basso prima
+  //for (int i = 16; i <= 31; i++) if (pend[i]) begin c = i; break; end
+  //if (c == -1 && pend[11]) c = 11; // MEIP
+  //else if (c == -1 && pend[7])  c = 7;  // MTIP
+  //else if (c == -1 && pend[3])  c = 3;  // MSIP
+
+  //if (c != -1) begin
+    //trap_armed         = 1'b1;
+    //trap_cause_latched = c;
+  //end
+//end
+
+//if (cause != -1) begin
+  //logic [31:0] mtvec = csr_reg_file[12'h305];
+  //logic [31:0] base  = mtvec & 32'hFFFF_FFFC;        // BASE (mode in [1:0])
+
+  // Salva CSRs d’ingresso trap
+  //csr_reg_file[12'h341]        = pc_before;          // mepc
+  //csr_reg_file[12'h342]        = {{1'b1, cause[30:0]}};// mcause[31]=1 (interrupt)
+  //csr_reg_file[12'h343]        = '0;                 // mtval=0
+
+  // mstatus: MPIE<-MIE; MIE<-0; MPP<-M
+  //csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];
+  //csr_reg_file[12'h300][3]     = 1'b0;
+  //csr_reg_file[12'h300][12:11] = 2'b11;
+
+  // Vectored: PC = BASE + 4*cause (CVE2 fa vectored per gli interrupt)
+  //pc    = base + (cause << 2);
+  //incr  = 0;
+
+  // Refetch subito l'istruzione al vettore (es. JAL x0, handler)
+  //instr     = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
+  //pc_before = pc;
+//end
 
     {casez_string}
 
@@ -701,6 +804,49 @@ class {class_name} extends {main_class};
         pc += incr;
 
         {rvfi_block}
+
+                        if (interrupt_vif.irq_ack && !interrupt_vif.irq[0]) begin
+
+
+
+        // --- IRQ maskabile
+        int c = -1;
+        $display("I'M INSIDE THE IRQ_ACK, I'M TAKEN AN IRQ");
+        $display("MIE_global: %0b", mie_global);
+        //if (mie_global) begin
+            for (int i = 16; i <= 30; i++) if (pend[i]) begin c = i; break; end
+            if (c == -1 && pend[11]) c = 11;
+            else if (c == -1 && pend[7])  c = 7;
+            else if (c == -1 && pend[3])  c = 3;
+            $display("c: %0d", c);
+    //end
+    if (c != -1) begin
+        trap_armed         = 1'b1;
+        trap_cause_latched = c;
+    end
+    end
+
+                        if (interrupt_vif.irq_ack) begin
+    if (interrupt_vif.irq[0]) begin
+        $display("[%0t] REF NMI taken: pc=%08h -> vector", $time, pc_before);
+        base = csr_reg_file[12'h305] & 32'hFFFF_FFFC;
+
+        // Save CSRs trap (NMI indipendente da MIE/mie)
+        // mepc = PC of interrupted instruction
+        csr_reg_file[12'h341]        = pc;
+        csr_reg_file[12'h342]        = {{1'b1, 31'd32}};
+        csr_reg_file[12'h343]        = '0;           // mtval = 0
+        csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3]; // MPIE <- MIE
+        csr_reg_file[12'h300][3]     = 1'b0;                     // MIE  <- 0
+        csr_reg_file[12'h300][12:11] = 2'b11;                    // MPP  <- M
+
+        pc         = csr_reg_file[12'h305] + 127;
+        incr       = 0;                        
+        instr = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
+        pc_before   = pc;                       
+
+    end
+    end
 
         return rvfi_instr_seq_item;
 

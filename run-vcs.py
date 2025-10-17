@@ -282,7 +282,7 @@ if __name__ == "__main__":
     # if uvm_test_name == "rec_tb_cor_axi_test_drive_both_computeram_no_fw_preload":
     #     crt0_path = f"{CORE_V_VERIF}/design/top/rec/scripts/c/dram_system/crt0.S"
 
-    if program in ["hello-world", "fibonacci", "csr_instructions", "branch_zero", "dhrystone"]:
+    if program in ["hello-world", "fibonacci", "csr_instructions", "branch_zero", "dhrystone", "interrupt_test"]:
         c_files = f"{CORE_TB_PATH}/tests/programs/custom/{program}/{program}.c"
     elif program == "coremark":
         c_files = f"-DITERATIONS=1 \
