@@ -154,7 +154,6 @@ cd {vcs_out_dir} &&  \
 {VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
 {vcs_compile_flags} \
 +incdir+{VCS_HOME}/etc/uvm/src \
-{VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
 +incdir+{CORE_TB_PATH}/env/uvme \
 +incdir+{CORE_TB_PATH}/tb/uvmt \
 +incdir+{CORE_V_VERIF} \

@@ -180,6 +180,10 @@ if __name__ == "__main__":
 
     # Switch branch depending on the presence of the coprocessor and data mover
     if args.cop:
+        # Defining this variable __UVMT_CV32E20_DUT_WRAP_SV__ means the compilation of the
+        # wrapper without CVXIF will be skipped
+        sv_comp_define += "+define+__UVMT_CV32E20_DUT_WRAP_SV__ "
+        sv_comp_define += "+define+__UVMT_CV32E20_TB_SV__ "
 
         if "cvxif" not in args.test:
             raise ValueError(f"\033[31mSubstring 'cvxif' not found in string {args.test} : you are trying to use the coprocessor but the test does not support CVX if\033[0m")
@@ -189,6 +193,11 @@ if __name__ == "__main__":
         rtl_commit = RTL_COP_COMMIT
         tb_commit = TB_COP_COMMIT
     else:
+        # Defining this variable __UVMT_CV32E20_DUT_WRAP_WITH_CVXIF_SV__ means the compilation of the
+        # wrapper with CVXIF will be skipped
+        sv_comp_define += "+define+__UVMT_CV32E20_DUT_WRAP_WITH_CVXIF_SV__ "
+        sv_comp_define += "+define+__UVMT_CV32E20_TB_CVXIF_SV__ "
+
         rtl_commit = RTL_BASE_COMMIT
         tb_commit = TB_BASE_COMMIT
 
