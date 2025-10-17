@@ -1,5 +1,5 @@
-`ifndef __UVMT_CV32E20_MODEL_TEST_SV__
-`define __UVMT_CV32E20_MODEL_TEST_SV__
+`ifndef __UVMT_CV32E20_UVM_MODEL_RVFI_SV__
+`define __UVMT_CV32E20_UVM_MODEL_RVFI_SV__
 
 class uvmt_cv32e20_model_test_c extends uvmt_cv32e20_firmware_test_c;
 
