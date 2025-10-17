@@ -86,7 +86,7 @@ sed -i 's/package riscv_instr;/package uvmc_rvfi_decoder_pkg;/' {DV_UVMC_RVFI_RE
 """
 
 autogen_cmd = """
-cd {RISCV_OPCODES_DIR}/../util && python decoder_autogen.py {decoder_autogen_flags}
+cd {RISCV_OPCODES_DIR}/../riscv_uvm_model/autogen && python main.py {decoder_autogen_flags}
 """
 
 dpi_compile_cmd = """
@@ -161,7 +161,7 @@ cd {vcs_out_dir} &&  \
 {additional_filelist} \
 -f {CORE_RTL_PATH}/cv32e20_manifest.flist \
 -f {CORE_TB_PATH}/tb/uvmt/uvmt_cv32e20.flist \
-{CORE_V_VERIF}/util/uvmt_cv32e20_model_test.sv \
+{CORE_V_VERIF}/riscv_uvm_model/uvmt/uvmt_cv32e20_model_test.sv \
 -top uvmt_{cv_core}_tb \
 -l vcs.log
 """

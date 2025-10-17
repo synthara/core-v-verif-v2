@@ -1,11 +1,10 @@
 from pathlib import Path
 import os
+import sys
 import argparse
 import shutil
 import subprocess
 import json
-from util import fmt
-from config import Config
 
 # Commit on branch feature/fdm_dev_tristan
 RTL_COP_COMMIT = "e5e7c6e82e8e6d6b46e4f5ae61e2a1331e41d607"
@@ -101,6 +100,12 @@ if __name__ == "__main__":
     # Get path to the current directory
     CORE_V_VERIF = os.path.dirname(os.path.realpath(__file__))
     os.environ["CORE_V_VERIF"] = CORE_V_VERIF
+
+    RISCV_UVM_MODEL_DIR = os.path.join(CORE_V_VERIF, "riscv_uvm_model")
+    sys.path.insert(0, CORE_V_VERIF)  # so riscv_uvm_model can be found
+
+    from riscv_uvm_model.utils import fmt
+    from riscv_uvm_model.utils.config import Config
 
     config = Config(args, CORE_V_VERIF)
 

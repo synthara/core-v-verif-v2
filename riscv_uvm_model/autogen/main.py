@@ -126,12 +126,12 @@ def reorder_casez_dict(casez_dict: dict, priority_path: str) -> dict:
 #                                                                                                                #
 ##################################################################################################################
 script_dir = os.path.dirname(os.path.abspath(__file__))
-config_json = os.path.join(script_dir, 'config.json')
-instr_dict_json = os.path.join(script_dir, os.path.pardir, 'riscv-opcodes', 'instr_dict.json')
-impl_dict_json = os.path.join(script_dir, 'impl_dict.json')
-input_file = os.path.join(script_dir, os.path.pardir, 'lib', 'uvm_components', 'uvmc_rvfi_reference_model', 'uvmc_rvfi_decoder_pkg.sv')
-arg_lut_file = os.path.join(script_dir, os.path.pardir, 'riscv-opcodes', 'arg_lut.csv')
-opcode_priority = os.path.join(script_dir, "opcode_priority.json")
+config_json = os.path.join(script_dir, 'config', 'model_config.json')
+instr_dict_json = os.path.join(script_dir, os.path.pardir, os.path.pardir, 'riscv-opcodes', 'instr_dict.json')
+impl_dict_json = os.path.join(script_dir, 'config', 'instr_impl.json')
+input_file = os.path.join(script_dir, os.path.pardir, os.path.pardir, 'lib', 'uvm_components', 'uvmc_rvfi_reference_model', 'uvmc_rvfi_decoder_pkg.sv')
+arg_lut_file = os.path.join(script_dir, os.path.pardir, os.path.pardir, 'riscv-opcodes', 'arg_lut.csv')
+opcode_priority = os.path.join(script_dir, 'config', "opcode_priority.json")
 
 
 only_variable_fields = dict()  #Dictionary which will contain key = instruction's name and val = variable fields
@@ -738,7 +738,7 @@ file_content = template_content.format(casez_string=casez_string,**values,
 
 
 #Writing the formatted content to the sysverilog class
-directory = os.path.join(script_dir, "..", "lib", "uvm_components", "uvmc_rvfi_reference_model")
+directory = os.path.join(script_dir, os.path.pardir, os.path.pardir, "lib", "uvm_components", "uvmc_rvfi_reference_model")
 
 output_file = os.path.join(directory, config["name"] + ".sv")
 

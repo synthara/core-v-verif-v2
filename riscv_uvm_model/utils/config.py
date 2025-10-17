@@ -10,7 +10,7 @@ class Config:
         self.CORE_TB_PATH                          = os.path.join(root_dir, args.core)
         self.VERILAB_DIR                           = os.path.join(self.CORE_TB_PATH, "vendor_lib", "verilab", "svlib")
         self.RISCV_OPCODES_DIR                     = os.path.join(root_dir, "riscv-opcodes")
-        self.RISCV_OPCODES_CONFIG_PATH             = os.path.join(root_dir, "util", "config.json")
+        self.RISCV_OPCODES_CONFIG_PATH             = os.path.join(root_dir, "riscv_uvm_model", "autogen", "config", "model_config.json")
         self.DV_UVMC_RVFI_REFERENCE_MODEL_DIR      = os.path.join(root_dir, "lib", "uvm_components", "uvmc_rvfi_reference_model")
         self.DV_UVMC_RVFI_REFERENCE_MODEL_PATH     = self.DV_UVMC_RVFI_REFERENCE_MODEL_DIR
         self.DV_UVMC_RVFI_REFERENCE_MODEL_PKG_PATH = os.path.join(self.DV_UVMC_RVFI_REFERENCE_MODEL_DIR, "uvmc_rvfi_decoder_pkg.sv")
