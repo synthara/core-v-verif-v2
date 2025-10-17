@@ -1,0 +1,8 @@
+
+// Directories
++incdir+${UVMT_CV32E20_UVM_MODEL_PKG_PATH}
+
+// Files
+${UVMT_CV32E20_UVM_MODEL_PKG_PATH}/uvmt_cv32e20_dut_wrap.sv
+${UVMT_CV32E20_UVM_MODEL_PKG_PATH}/uvmt_cv32e20_tb.sv
+${UVMT_CV32E20_UVM_MODEL_PKG_PATH}/uvmt_cv32e20_uvm_model_pkg.sv

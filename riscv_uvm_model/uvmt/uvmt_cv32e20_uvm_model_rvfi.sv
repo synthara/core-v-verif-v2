@@ -1,11 +1,5 @@
-`ifndef __UVMT_CV32E20_MODEL_TEST_SV__
-`define __UVMT_CV32E20_MODEL_TEST_SV__
-
-import uvmc_rvfi_reference_model_pkg::*;
-import uvma_core_cntrl_pkg::*;
-import uvme_cv32e20_pkg::*;
-import uvmc_rvfi_scoreboard_pkg::*;
-// import uvma_cvxif_pkg::*;
+`ifndef __UVMT_CV32E20_UVM_MODEL_RVFI_SV__
+`define __UVMT_CV32E20_UVM_MODEL_RVFI_SV__
 
 class uvmt_cv32e20_model_test_c extends uvmt_cv32e20_firmware_test_c;
 

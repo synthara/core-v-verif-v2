@@ -12,14 +12,16 @@ RTL_COP_COMMIT = "e5e7c6e82e8e6d6b46e4f5ae61e2a1331e41d607"
 RTL_BASE_COMMIT = "e027937aef36f95723b05f19eecdd2f567495e57"
 
 # Commit on branch pab_uvm_tristan
-TB_COP_COMMIT = "a7e008b1c88c880898bacc785659319cba76bf9b"
+# TB_COP_COMMIT = "a7e008b1c88c880898bacc785659319cba76bf9b"
 # Commit on branch feature/interrupts
+TB_COP_COMMIT = "e892f368f831b0df7d5da00a93c5ef6d5b7998cc"
 TB_BASE_COMMIT = "e892f368f831b0df7d5da00a93c5ef6d5b7998cc"
 
 allowed_tests = [
     "uvmt_cv32e20_firmware_test_c",
     "uvmt_cv32e20_model_test_c",
-    "uvmt_cv32e20_model_test_dual_ref_c"
+    "uvmt_cv32e20_model_test_dual_ref_c",
+    "uvmt_cv32e20_model_test_with_cvxif_c"
 ]
 
 allowed_marches = [
@@ -178,16 +180,29 @@ if __name__ == "__main__":
 
     # Switch branch depending on the presence of the coprocessor and data mover
     if args.cop:
+        # Defining this variable __UVMT_CV32E20_DUT_WRAP_SV__ means the compilation of the
+        # wrapper without CVXIF will be skipped
+        sv_comp_define += "+define+__UVMT_CV32E20_DUT_WRAP_SV__ "
+        sv_comp_define += "+define+__UVMT_CV32E20_TB_SV__ "
+
+        if "cvxif" not in args.test:
+            raise ValueError(f"\033[31mSubstring 'cvxif' not found in string {args.test} : you are trying to use the coprocessor but the test does not support CVX if\033[0m")
+
         additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/xcs/coproc.fl "
         
         rtl_commit = RTL_COP_COMMIT
         tb_commit = TB_COP_COMMIT
     else:
+        # Defining this variable __UVMT_CV32E20_DUT_WRAP_WITH_CVXIF_SV__ means the compilation of the
+        # wrapper with CVXIF will be skipped
+        sv_comp_define += "+define+__UVMT_CV32E20_DUT_WRAP_WITH_CVXIF_SV__ "
+        sv_comp_define += "+define+__UVMT_CV32E20_TB_CVXIF_SV__ "
+
         rtl_commit = RTL_BASE_COMMIT
         tb_commit = TB_BASE_COMMIT
 
-        # Still compile the cvxif agent even if the coprocessor is not compiled, as it is used to drive the custom instructions
-        additional_filelist += f"-f {CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif/src/uvma_cvxif_pkg.flist "
+    # Still compile the cvxif agent even if the coprocessor is not compiled, as it is used to drive the custom instructions
+    additional_filelist += f"-f {CORE_V_VERIF}/lib/uvm_agents/uvma_cvxif/src/uvma_cvxif_pkg.flist "
 
     if args.dmv:
         additional_filelist += f"-f {CORE_V_VERIF}/core-v-cores/lsu/datamover.fl "

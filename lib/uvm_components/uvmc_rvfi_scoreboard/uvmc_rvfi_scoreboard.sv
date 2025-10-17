@@ -18,13 +18,6 @@
 
 `uvm_analysis_imp_decl(_rvfi_instr_reference_model)
 `uvm_analysis_imp_decl(_rvfi_instr_core)
-`uvm_analysis_imp_decl(_cvx_instr)
-`uvm_analysis_imp_decl(_cvx_req_rtl)
-`uvm_analysis_imp_decl(_cvx_req_ref_model)
-`uvm_analysis_imp_decl(_cvx_resp_ref_model)
-`uvm_analysis_imp_decl(_cvx_resp_rtl)
-
-import uvma_cvxif_pkg::*;
 
 /*
  * Scoreboard component which compares RVFI transactions comming from the
@@ -35,10 +28,6 @@ class uvmc_rvfi_scoreboard_c#(int ILEN=DEFAULT_ILEN,
 
    uvm_analysis_imp_rvfi_instr_reference_model#(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN), uvmc_rvfi_scoreboard_c) m_imp_reference_model;
    uvm_analysis_imp_rvfi_instr_core#(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN), uvmc_rvfi_scoreboard_c) m_imp_core;
-   uvm_analysis_imp_cvx_resp_rtl#(uvma_cvxif_resp_item_c, uvmc_rvfi_scoreboard_c) m_imp_cvxif_resp_rtl;
-   uvm_analysis_imp_cvx_resp_ref_model#(uvma_cvxif_resp_item_c, uvmc_rvfi_scoreboard_c) m_imp_cvxif_resp_ref_model;
-   uvm_analysis_imp_cvx_req_rtl#(uvma_cvxif_req_item_c, uvmc_rvfi_scoreboard_c) m_imp_cvxif_req_rtl;
-   uvm_analysis_imp_cvx_req_ref_model#(uvma_cvxif_req_item_c, uvmc_rvfi_scoreboard_c) m_imp_cvxif_req_ref_model;
 
    // Core configuration (used to extract list of CSRs)
    uvma_core_cntrl_cfg_c         cfg;
@@ -51,10 +40,6 @@ class uvmc_rvfi_scoreboard_c#(int ILEN=DEFAULT_ILEN,
 
     uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) core[$];
     uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) reference_model[$];
-    uvma_cvxif_resp_item_c core_cvx_resp[$];
-    uvma_cvxif_resp_item_c reference_model_cvx_resp[$];
-    uvma_cvxif_req_item_c core_cvx_req[$];
-    uvma_cvxif_req_item_c reference_model_cvx_req[$];
 
    /*
     * Default constructor.
@@ -65,10 +50,6 @@ class uvmc_rvfi_scoreboard_c#(int ILEN=DEFAULT_ILEN,
 
         m_imp_reference_model = new("m_imp_reference_model", this);
         m_imp_core = new("m_imp_core", this);
-        m_imp_cvxif_resp_ref_model = new("m_imp_cvxif_resp_ref_model", this);
-        m_imp_cvxif_resp_rtl   = new("m_imp_cvxif_resp_rtl",   this);
-        m_imp_cvxif_req_rtl      = new("m_imp_cvxif_req_rtl",       this);
-        m_imp_cvxif_req_ref_model = new("m_imp_cvxif_req_ref_model", this);
 
     endfunction : new
 
@@ -90,30 +71,6 @@ class uvmc_rvfi_scoreboard_c#(int ILEN=DEFAULT_ILEN,
    extern virtual function void write_rvfi_instr_reference_model(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
 
    extern virtual function void write_rvfi_instr_core(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-
-   function void write_cvx_resp_ref_model(uvma_cvxif_resp_item_c t);
-
-      reference_model_cvx_resp.push_back(t);
-
-   endfunction
-
-   function void write_cvx_resp_rtl(uvma_cvxif_resp_item_c t);
-
-      core_cvx_resp.push_back(t);
-
-   endfunction
-
-   function void write_cvx_req_rtl(uvma_cvxif_req_item_c t);
-
-      core_cvx_req.push_back(t);
-
-   endfunction
-
-   function void write_cvx_req_ref_model(uvma_cvxif_req_item_c t);
-
-      reference_model_cvx_req.push_back(t);
-
-   endfunction
 
 endclass : uvmc_rvfi_scoreboard_c
 
@@ -146,31 +103,6 @@ task uvmc_rvfi_scoreboard_c::run_phase(uvm_phase phase);
 
     sim_finished = 0;
     phase.raise_objection(this);
-    
-    // while (!sim_finished) begin
-    //     @(reference_model.size > 0)
-    //     while (reference_model.size > 0 && !sim_finished)
-    //     begin
-    //         t_reference_model = reference_model.pop_front();
-    //         t_core = core.pop_front();
-    //         rvfi_compare(t_core.seq2rvfi(), t_reference_model.seq2rvfi());
-
-    //         if (cvxif_resp_exp_q.size() > 0) begin
-    //             uvma_cvxif_resp_item_c exp = cvxif_resp_exp_q.pop_front();
-    //             $display("[%0t][SB][CVXIF][EXPECTED] result_valid=%0b rd=%0d data=0x%08h",
-    //             $time, exp.result_valid, exp.result.rd, exp.result.data);
-    //         end
-
-    //         if (cvxif_resp_act_q.size() > 0) begin
-    //             uvma_cvxif_resp_item_c act = cvxif_resp_act_q.pop_front();
-    //             $display("[%0t][SB][CVXIF][ACTUAL  ] result_valid=%0b rd=%0d data=0x%08h",
-    //             $time, act.result_valid, act.result.rd, act.result.data);
-    //         end
-
-    //         if (t_reference_model.halt || (sentinel_enable && (sentinel_value == t_reference_model.insn)))
-    //             sim_finished = 1;
-    //     end
-    // end
 
     fork
 
@@ -187,67 +119,6 @@ task uvmc_rvfi_scoreboard_c::run_phase(uvm_phase phase);
               (sentinel_enable && (sentinel_value == t_reference_model.insn))) begin
             sim_finished = 1;
             break;
-          end
-        end
-      end
-
-      // ========================
-      // CVXIF thread
-      // ========================
-      begin : cvxif_thread_resp
-        uvma_cvxif_resp_item_c model_trx;
-        uvma_cvxif_resp_item_c rtl_trx;
-
-        forever begin
-          wait((reference_model_cvx_resp.size() > 0) ||
-                sim_finished);
-          if (sim_finished) break;
-
-          if (reference_model_cvx_resp.size() > 0) begin
-            model_trx = reference_model_cvx_resp.pop_front();
-          end
-
-          if (core_cvx_resp.size() > 0) begin
-            rtl_trx = core_cvx_resp.pop_front();
-          end
-
-          if (!model_trx.compare(rtl_trx, uvm_default_comparer)) begin
-            `uvm_error("CVXIF_SB", "CVXIF response mismatch (see field deltas above)")
-            `uvm_info("CVXIF_SB",
-            $sformatf("EXP: valid=%0b rd=%0d data=0x%08h\nACT: valid=%0b rd=%0d data=0x%08h",
-                  model_trx.result_valid, model_trx.result.rd, model_trx.result.data,
-                  rtl_trx.result_valid, rtl_trx.result.rd, rtl_trx.result.data),
-            UVM_LOW)
-          end
-        end
-      end
-
-
-      begin : cvxif_thread_req
-
-         uvma_cvxif_req_item_c model_trx;
-         uvma_cvxif_req_item_c rtl_trx;
-
-        forever begin
-          wait((reference_model_cvx_req.size() > 0) ||
-                sim_finished);
-          if (sim_finished) break;
-
-          if (reference_model_cvx_req.size() > 0) begin
-            model_trx = reference_model_cvx_req.pop_front();
-          end
-
-          if (core_cvx_req.size() > 0) begin
-            rtl_trx = core_cvx_req.pop_front();
-          end
-
-          if (!model_trx.compare(rtl_trx, uvm_default_comparer)) begin
-            `uvm_error("CVXIF_SB", "CVXIF response mismatch (see field deltas above)")
-            // `uvm_info("CVXIF_SB",
-            // $sformatf("EXP: valid=%0b rd=%0d data=0x%08h\nACT: valid=%0b rd=%0d data=0x%08h",
-            //       model_trx.result_valid, model_trx.result.rd, model_trx.result.data,
-            //       rtl_trx.result_valid, rtl_trx.result.rd, rtl_trx.result.data),
-            // UVM_LOW)
           end
         end
       end

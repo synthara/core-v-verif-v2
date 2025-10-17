@@ -154,14 +154,13 @@ cd {vcs_out_dir} &&  \
 {VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
 {vcs_compile_flags} \
 +incdir+{VCS_HOME}/etc/uvm/src \
-{VCS_HOME}/etc/uvm/src/uvm_pkg.sv \
 +incdir+{CORE_TB_PATH}/env/uvme \
 +incdir+{CORE_TB_PATH}/tb/uvmt \
 +incdir+{CORE_V_VERIF} \
 {additional_filelist} \
 -f {CORE_RTL_PATH}/cv32e20_manifest.flist \
 -f {CORE_TB_PATH}/tb/uvmt/uvmt_cv32e20.flist \
-{CORE_V_VERIF}/riscv_uvm_model/uvmt/uvmt_cv32e20_model_test.sv \
+-f {CORE_V_VERIF}/riscv_uvm_model/uvmt/uvmt_cv32e20_uvm_model_pkg.flist \
 -top uvmt_{cv_core}_tb \
 -l vcs.log
 """
