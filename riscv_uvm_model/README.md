@@ -19,7 +19,7 @@ High level structure of the current folder is:
 │   │   └── opcode_priority.json
 │   └── main.py
 ├── docs
-│   ├── Algorithm_flow.png
+│   ├── Autogeneration_flow.png
 │   └── README.md
 ├── perf_analyzer
 │   ├── perf_analyzer_config.yml
@@ -75,7 +75,7 @@ It handles everything from reading configuration files and instruction definitio
 
 Store reference materials, diagrams, and design documentation describing the generation process.
 
-- **`Algorithm_flow.png`**   — schematic overview of the model generation process  
+- **`Autogeneration_flow.png`**   — schematic overview of the model generation process  
 
 - **`README.md`**            — supplementary documentation and notes about proper configuration and use of the autogeneration flow 
 
@@ -322,7 +322,7 @@ log/default/vcs_results/default/<program>/0/
    ```
 5. **Modify JSON or run different tests** to add or change instructions, then rerun the same command.
 
----
+---    
 
 ## 8. Key Advantages
 
