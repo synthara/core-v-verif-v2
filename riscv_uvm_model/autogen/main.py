@@ -4,6 +4,10 @@ import json
 import csv
 import argparse
 
+#Global variables to make an indentation when needed
+INDENT_ONE = "    "                     
+INDENT_TWO = "        "
+INDENT_THREE = "            "
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--set_clock", action = "store_true", help="Set the clock to the model")
@@ -90,36 +94,6 @@ def reorder_casez_dict(casez_dict: dict, priority_path: str) -> dict:
 
     return new_casez_dict
 
-
-# def append_update(dict1, dict2):
-#     for key, value in dict2.items():
-#         if key in dict1:
-#             if isinstance(dict1[key], list):
-#                 dict1[key].extend(value)
-#             else:
-#                 if isinstance(value, dict):
-#                     # If the value is a dict, we need to update the dict1[key] recursively
-#                     append_update(dict1[key], value)
-#                 else:
-#                     # For non-dict values, turn them into lists
-#                     dict1[key] = [dict1[key], value]
-#         else:
-#             dict1[key] = value
-
-
-# def read_json_files(json_files):
-#     instructions = {}
-#     for json_file, flag in json_files:
-#         # print(json_file, flag)
-#         if flag:
-#             with open(json_file, 'r') as f:
-#                 data = json.load(f)
-#                 append_update(instructions, data["instructions"])
-#     # print(instructions)
-#     return instructions
-
-
-
 ##################################################################################################################
 #                                                                                                                #
 #                                                   MAIN                                                         #
@@ -140,143 +114,6 @@ instruction_formats = dict()   #Dictionary which will contain key = instruction'
 bitfield_mapping = dict()      #Dictionary which will contain key = instruction's name and val = dictionary with the bitfield mapping for each variable fields
 casez_dict = dict()            #Dictionary which will contain key = instruction's name and val = all the stuff to be put in the each case statement
 implementations_dict = dict()  #Dictionary which will contain key = instruction's name and val = the implementation of the instruction
-
-# json_files = [
-#     ('isa_generic_ALU.json', True),
-#     ('isa_clip.json', True),
-#     ('isa_add_sub.json', True),
-#     ('isa_add_sub_ls3.json', True),
-#     ('isa_mac_32.json', True),
-#     ('isa_mul_16_8.json', True),
-#     ('isa_mac_16_8.json', True),
-#     ('isa_generic_SIMD.json', True),
-#     ('isa_dotp_SIMD.json', True),
-#     ('isa_cmp_SIMD.json', True),
-# ]
-
-# Read JSON files and collect instructions
-# dict_maurizio_instructions = read_json_files(json_files)
-
-# var_field_nuove_istruzioni = {}
-# for opcode in dict_maurizio_instructions:
-#     funct3_block = dict_maurizio_instructions[opcode]["funct3"]
-#     for funct3 in funct3_block:
-#         funct7_block = funct3_block[funct3]["funct7"]
-#         for funct7 in funct7_block:
-#             instr = funct7_block[funct7]
-#             mnemonic = instr["mnemonic"]
-#             operands = instr["operands"]
-#             fields = list(operands.keys())
-#             var_field_nuove_istruzioni[mnemonic] = fields  
-
-
-#Global variables to make an indentation when needed
-INDENT_ONE = "    "                     
-INDENT_TWO = "        "
-INDENT_THREE = "            "
-
-
-# Define field dictionaries for different instruction types (7 dictionaries, 6 formats plus fence)
-# riscv_r_fields = {
-#     "rd": "11:7",
-#     "rs1": "19:15",
-#     "rs2": "24:20"
-# }
-
-# riscv_i_fields = {
-#     "rd": "11:7",
-#     "rs1": "19:15",
-#     "imm12": "31:20"
-# }
-
-# custom_fields_fence = {
-#     'fm':   "31:28",
-#     'pred': "27:24",
-#     'succ': "23:20",
-#     'rs1':  "19:15",  
-#     'rd':   "11:7"    
-# }
-# custom_fields_rv32_i = {
-#     'rd':   "11:7",
-#     'rs1':  "19:15",
-#     'shamtw': "24:20"
-# }
-# custom_field_rv32csr = {
-#     'rd':   "11:7",
-#     'rs1':  "19:15",
-#     'csr': "31:20",
-# }
-# custom_field_rv32csr_i = {
-#     'rd':   "11:7",
-#     'csr':  "31:20",
-#     'zimm5': "19:15",
-# }
-# riscv_s_fields = {
-#     "imm12hi": "31:25",
-#     "rs1": "19:15",
-#     "rs2": "24:20",
-#     "imm12lo": "11:7"
-# }
-
-# riscv_sb_fields = {
-#     "bimm12hi": "31:25",
-#     "rs1": "19:15",
-#     "rs2": "24:20",
-#     "bimm12lo": "11:7"
-# }
-
-# riscv_u_fields = {
-#     "rd": "11:7",
-#     "imm20": "31:12"
-# }
-
-# riscv_uj_fields = {
-#     "rd": "11:7",
-#     "jimm20": "31:12"
-# }
-
-# unknown_fields = {"UNKNOWN": "still empty"}
-
-#Dictionary with all the formats
-# format_dicts = {
-    # 'R': riscv_r_fields,
-    # 'I': riscv_i_fields,
-    # 'S': riscv_s_fields,
-    # 'SB': riscv_sb_fields,
-    # 'U': riscv_u_fields,
-    # 'UJ': riscv_uj_fields,
-    # 'FENCE': custom_fields_fence,
-    # 'RV32_I': custom_fields_rv32_i,
-    # 'RV32CSR': custom_field_rv32csr,
-    # 'RV32CSR_I': custom_field_rv32csr_i,
-#     'UNKNOWN': unknown_fields
-# }
-
-#Dictionary with length of the fields
-# field_specs = {
-#     "rd":       "[4:0]",
-#     "rs1":      "[4:0]",
-#     "rs2":      "[4:0]",
-#     "imm12":    "[11:0]",
-#     "imm12hi":  "[6:0]",
-#     "imm12lo":  "[4:0]",
-#     "bimm12hi": "[6:0]",
-#     "bimm12lo": "[4:0]",
-#     "jimm20":   "[19:0]",
-#     "imm20":    "[19:0]",
-#     "fm":       "[3:0]",
-#     "pred":     "[3:0]",
-#     "succ":     "[3:0]",
-#     "imms":     "[11:0]",
-#     "immsb":    "[12:0]",
-#     "immuj":    "[31:0]",
-#     "pc":       "[31:0]",
-#     "reg_mul":  "[63:0]",
-#     "shamtw":   "[4:0]",
-#     "csr":      "[11:0]",
-#     "zimm5":    "[4:0]",
-#     "reg_file[31:0]": "[31:0]"
-# }
 
 #Opening json to extract parameters to format the template
 with open(config_json) as f:            
@@ -299,18 +136,18 @@ with open(opcode_priority) as f4:
     priority_list = json.load(f4)
 
 
-# def concat_indent(base_indent: str, times: int) -> str:
-#     """
-#     Concatenates the base indentation string a specified number of times.
+def concat_indent(times: int, base_indent: str=INDENT_ONE) -> str:
+    """
+    Concatenates the base indentation string a specified number of times.
 
-#     Args:
-#         base_indent (str): The base indentation string.
-#         times (int): The number of times to concatenate the base indentation.
+    Args:
+        base_indent (str): The base indentation string.
+        times (int): The number of times to concatenate the base indentation.
 
-#     Returns:
-#         str: The concatenated indentation string.
-#     """
-#     return base_indent * times
+    Returns:
+        str: The concatenated indentation string.
+    """
+    return base_indent * times
 
 
 #Extracting parameters from config.json to format the template
@@ -354,50 +191,7 @@ for instruction, data in instr_dict.items():
 #Extracting the implementation for each instruction from the impl_dict.json
 for instruction, impls in impl_dict.items():
     for i, (key, value) in enumerate(impls.items()):
-            implementations_dict[instruction] = value
-
-
-# Here I use function set to convert the field list in a set, so I can compare the dictionary created before
-# for instr, fields in only_variable_fields.items():
-#     fset = set(fields)
-    # if fset <= set(riscv_r_fields.keys()):
-    #     instruction_formats[instr] = 'R'
-    # elif fset <= set(riscv_i_fields.keys()) :
-    #     instruction_formats[instr] = 'I'
-    # if fset <= set(riscv_s_fields.keys()):
-    #     instruction_formats[instr] = 'S'
-    # elif fset <= set(riscv_sb_fields.keys()):
-    #     instruction_formats[instr] = 'SB'
-    # elif fset <= set(riscv_u_fields.keys()):
-    #     instruction_formats[instr] = 'U'
-    # elif fset <= set(riscv_uj_fields.keys()):
-    #     instruction_formats[instr] = 'UJ'
-    # elif fset <= set(custom_fields_fence.keys()):
-    #     instruction_formats[instr] = 'FENCE'
-    # elif fset <= set(custom_fields_rv32_i.keys()):
-    #     instruction_formats[instr] = 'RV32_I'
-    # elif fset <= set(custom_field_rv32csr.keys()):
-    #     instruction_formats[instr] = 'RV32CSR'
-    # elif fset <= set(custom_field_rv32csr_i.keys()):
-    #     instruction_formats[instr] = 'RV32CSR_I'
-    # else:
-    #     instruction_formats[instr] = 'UNKNOWN'
-
-
-
-
-
-
-# #Here I create a dictionary with the bitfield mapping for each variable field
-# for instr, fields in only_variable_fields.items():
-#     fmt_name = instruction_formats[instr] #this should be only the instruction's format
-#     fmt_dict = format_dicts[fmt_name] #This is extracting the variable fields from the dictionary
-#     bitfield_mapping[instr] = {
-#         field: fmt_dict[field] for field in fields 
-#     }
-
-
-
+        implementations_dict[instruction] = value
 
 # Filling the casez_dict which will contain all the datas to be put in the case
 for i, (key, val) in enumerate(opcode_dict.items()):
@@ -409,23 +203,18 @@ for i, (key, val) in enumerate(opcode_dict.items()):
             for var_field, (start, end) in arg_lut.items():
                 for single_field in fields:
                     if single_field == var_field:
+                        indentation = concat_indent(4, "\t")
                         if start == end:
-                            casez_dict[f"assign{i}"] += f"{INDENT_THREE}{INDENT_ONE}{var_field} = instr[{start}];\n"
+                            casez_dict[f"assign{i}"] += f"{indentation}{var_field} = instr[{start}];\n"
                         else:
-                            casez_dict[f"assign{i}"] += f"{INDENT_THREE}{INDENT_ONE}{var_field} = instr[{start}:{end}];\n"
-            # if(fmt_name == "S"):
-            #     casez_dict[f"assign{i}"] += f"{INDENT_THREE}{INDENT_ONE}imms = {{imm12hi, imm12lo}};\n"
-            # if(fmt_name == "SB"):
-            #     casez_dict[f"assign{i}"] += f"{INDENT_THREE}{INDENT_ONE}immsb = {{bimm12hi[6], bimm12lo[0], bimm12hi[5:0], bimm12lo[4:1], 1'b0}};\n"
-            # if(fmt_name == "UJ"):
-            #     casez_dict[f"assign{i}"] += f"{INDENT_THREE}{INDENT_ONE}immuj = {{{{11{{jimm20[19]}}}},jimm20[19], jimm20[7:0], jimm20[8], jimm20[18:9], 1'b0}};\n"
+                            casez_dict[f"assign{i}"] += f"{indentation}{var_field} = instr[{start}:{end}];\n"
             if instr.lower() in implementations_dict.keys():
-                casez_dict[f"assign{i}"] += f"{INDENT_THREE}{INDENT_ONE}{implementations_dict[instr.lower()]}\n"
+                for line in implementations_dict[instr.lower()]:
+                    indentation = concat_indent(line["indent"], "\t")
+                    casez_dict[f"assign{i}"] += f"{indentation}{line['str']}\n"
 
 #Reordering the casez_dict based on the priority list
 casez_dict = reorder_casez_dict(casez_dict, priority_list)
-
-
 
 #this block manages the cases in which there is the clock or not
 if mode == "clock":
@@ -857,10 +646,6 @@ endclass : {class_name}
 
 `endif // __{class_name}_SV__
 """
-
-
-
-
 
 #Formatting the template with the extracted parameters
 casez_fmt = get_if_else_statement_fmt(length=len(opcode_dict)-1, case_format=True, always_comb=False)
