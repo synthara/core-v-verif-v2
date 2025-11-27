@@ -3,11 +3,8 @@ import re
 import json
 import csv
 import argparse
-
-#Global variables to make an indentation when needed
-INDENT_ONE = "    "                     
-INDENT_TWO = "        "
-INDENT_THREE = "            "
+from utils.util import *
+from utils.fmt import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--set_clock", action = "store_true", help="Set the clock to the model")
@@ -21,57 +18,6 @@ elif args.set_while:
     mode = "while"
 else:
     mode = "step"
-
-#If/else/case format function
-def get_if_else_statement_fmt(length: int, always_comb: bool = True, implicit_final_condition: bool = True, case_format: bool = False, unique: bool = False, default_assign: bool = True) -> str:
-    """
-    Generates a formatted string for an if-else or case statement in SystemVerilog.
-    Args:
-        length (int): The number of conditions to generate.
-        always_comb (bool, optional): If True, wraps the statement in an always_comb block. Defaults to True.
-        implicit_final_condition (bool, optional): If True, the final else condition is implicit. Defaults to True.  
-        case_format (bool, optional): If True, generates a case statement instead of if-else. Defaults to False.
-    Returns:
-        str: A formatted string representing the if-else or case statement.
-    """
-    
-    if always_comb:
-        out_fmt = "always_comb begin\n"
-    else:
-        out_fmt = "\n"
-        
-    if case_format is True:
-        
-        if unique:
-            out_fmt += "{indent}unique case ({val})\n"
-        else:
-            out_fmt += "{indent}casez ({val})\n\n"
-        for i in range(length+1):
-            out_fmt += f"{{indent}}{INDENT_ONE}{{condition{i}}} : begin\n\n{{indent}}{{indent}}{{assign{i}}}\n{{indent}}{INDENT_ONE}end\n\n"
-
-        if default_assign is True:
-            out_fmt += f"{{indent}}{INDENT_ONE}default: {{default_assign}}\n\n"    
-        
-        out_fmt += "{indent}endcase\n"
-    else:
-        for i in range(length):
-            if i == 0:
-                out_fmt += f"{{indent}}\tif ({{condition{i}}}) begin\n"
-            elif i == length-1 and implicit_final_condition is True:
-                out_fmt += "{indent}\tend else begin\n"
-            else:
-                out_fmt += f"{{indent}}\tend else if ({{condition{i}}}) begin\n"
-                
-            # out_fmt += f"{{indent}}\t\t{{lhs}} = {{rhs{i}}};\n"
-            out_fmt += f"{{assign{i}}}"
-
-        out_fmt += "{indent}\tend\n"
-    
-    if always_comb:
-        out_fmt += "\tend\n"
-    
-    return out_fmt
-
 
 #Function to reorder the casez_dict based on the priority list
 def reorder_casez_dict(casez_dict: dict, priority_path: str) -> dict:
@@ -136,25 +82,11 @@ with open(opcode_priority) as f4:
     priority_list = json.load(f4)
 
 
-def concat_indent(times: int, base_indent: str=INDENT_ONE) -> str:
-    """
-    Concatenates the base indentation string a specified number of times.
-
-    Args:
-        base_indent (str): The base indentation string.
-        times (int): The number of times to concatenate the base indentation.
-
-    Returns:
-        str: The concatenated indentation string.
-    """
-    return base_indent * times
-
-
 #Extracting parameters from config.json to format the template
 values = {                                       
     "class_name": config["name"],
     "parent": config["parent"],
-    "main_class": config["main_class"],
+    "main_class": config["main_class"].format(ilen=config["instr_width"], xlen=config["data_width"]),
     "instr_width": config["instr_width"],
     "path_name": config["path_name"],
 }
@@ -162,7 +94,7 @@ values = {
 
 #Extracting the field names and sizes from the field_specs dictionary
 field_block = "".join(
-    f"{f'bit [{start-end}:0]' if start != end else f'bit'} {field};\n{INDENT_ONE}"
+    f"{f'bit [{start-end}:0]' if start != end else f'bit'} {field};\n{concat_indent(1)}"
     for field, (start, end) in arg_lut.items()
 )
 
@@ -196,7 +128,7 @@ for instruction, impls in impl_dict.items():
 # Filling the casez_dict which will contain all the datas to be put in the case
 for i, (key, val) in enumerate(opcode_dict.items()):
     casez_dict[f"condition{i}"] = f"{key}"
-    casez_dict[f"assign{i}"]    = f'`uvm_info("{key}", \"Instruction {key} detected successfully\", UVM_LOW)\n\n\n\n'
+    casez_dict[f"assign{i}"]    = f'`uvm_info("{key}", \"Instruction {key} detected successfully\", {config["uvm_verbosity"]})\n\n\n\n'
     for j, (instr, fields) in enumerate(only_variable_fields.items()):
         if(key.lower() == instr.lower()):
             #fmt_name = instruction_formats[instr]
@@ -299,353 +231,28 @@ else:
     //endfunction : write_rvfi_instr
 """
 
-rvfi_block = f"""
-
-{INDENT_TWO}rvfi_instr_seq_item.order     = order++;
-{INDENT_TWO}rvfi_instr_seq_item.insn      = instr;
-{INDENT_TWO}rvfi_instr_seq_item.rs1_addr  = rs1;
-{INDENT_TWO}rvfi_instr_seq_item.rs1_rdata = reg_rs1_prev;
-{INDENT_TWO}rvfi_instr_seq_item.rs2_addr  = rs2;
-{INDENT_TWO}rvfi_instr_seq_item.rs2_rdata = reg_rs2_prev;
-{INDENT_TWO}rvfi_instr_seq_item.rd1_addr  = rd;
-{INDENT_TWO}rvfi_instr_seq_item.rd1_wdata = reg_file[rd];
-{INDENT_TWO}rvfi_instr_seq_item.pc_rdata  = pc_before;
-{INDENT_TWO}rvfi_instr_seq_item.pc_wdata  = pc;
-"""
-
-cvx_block = f"""
-{INDENT_TWO}if(is_cv_instr) begin
-{INDENT_THREE}cvx_instr_req_item.issue_req.instr = instr;
-{INDENT_THREE}//cvx_instr_req_item.commit_req.commit_kill = commit_kill;
-{INDENT_THREE}cvx_instr_req_item.register.rs[0] = reg_rs1_prev;
-{INDENT_THREE}cvx_instr_req_item.register.rs[1] = reg_rs2_prev;
-{INDENT_THREE}cvx_instr_req_item.register.rs[2] = reg_rs3_prev;
-{INDENT_THREE}cvx_instr_req_item.register.rs_valid = 3'b111;
-{INDENT_THREE}cvx_instr_req_item.issue_valid = 1'b1;
-{INDENT_THREE}cvx_instr_req_item.commit_valid = 1'b1;
-{INDENT_THREE}cvx_instr_resp_item.issue_resp.accept = 1'b1;
-{INDENT_THREE}//cvx_instr_resp_item.issue_resp.writeback = {{ (X_DUALWRITE+1){{1'b1}}}};
-{INDENT_THREE}//cvx_instr_resp_item.issue_resp.register_read = {{ (X_NUM_RS+X_DUALREAD){{1'b1}}}};
-{INDENT_THREE}cvx_instr_resp_item.result.rd  = rd;
-{INDENT_THREE}//$display("rd:%0d", cvx_instr_resp_item.result.rd);
-{INDENT_THREE}cvx_instr_resp_item.result.data  = reg_file[rd];
-{INDENT_THREE}//$display("rd_data:%0h", cvx_instr_resp_item.result.data);
-{INDENT_THREE}cvx_instr_resp_item.result_valid = 1'b1;
-{INDENT_THREE}cvx_instr_resp_item.result.we = 1'b1;
-{INDENT_THREE}//cvx_instr_resp_item.issue_ready = 1'b1;
-{INDENT_THREE}m_ap_cvxif_resp.write(cvx_instr_resp_item);
-{INDENT_THREE}m_ap_cvxif_req.write(cvx_instr_req_item);
-{INDENT_TWO}end
-"""
-
-rvfi_seq_item_def = f"""
-{INDENT_ONE}uvma_rvfi_instr_seq_item_c#(32, 32) rvfi_instr_seq_item;
-"""
-
-cvx_seq_item_def = f"""
-{INDENT_ONE}uvma_cvxif_resp_item_c cvx_instr_resp_item;
-{INDENT_ONE}uvma_cvxif_req_item_c cvx_instr_req_item;
-"""
-
-rvfi_seq_item_assign = f"""
-{INDENT_ONE}rvfi_instr_seq_item = uvma_rvfi_instr_seq_item_c#(32,32)::type_id::create("rvfi_instr_seq_item", this);
-"""
-
-cvx_seq_item_assign = f"""
-{INDENT_ONE}cvx_instr_resp_item = uvma_cvxif_resp_item_c::type_id::create("cvx_instr_resp_item", this);
-{INDENT_ONE}cvx_instr_req_item = uvma_cvxif_req_item_c::type_id::create("cvx_instr_req_item", this);
-"""
+additional_regs = "".join(
+    f"{reg['type']} {reg['name'].format(**config)};\n{concat_indent(1)}"
+    for reg in config.get("additional_regs", [])
+)
 
 def get_rvfi_block(cvx_if_present: bool) -> str:
     if cvx_if_present:
-        return rvfi_block + cvx_block
+        return rvfi_block.format(indent=concat_indent(2)) + cvx_block.format(indent=concat_indent(2), INDENT_ONE=INDENT_ONE)
     else:
-        return rvfi_block
+        return rvfi_block.format(indent=concat_indent(2))
 
 def get_seq_item_def(cvx_if_present: bool) -> str:
     if cvx_if_present:
-        return rvfi_seq_item_def + cvx_seq_item_def
+        return rvfi_seq_item_def.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"]) + cvx_seq_item_def.format(indent=concat_indent(1))
     else:
-        return rvfi_seq_item_def
+        return rvfi_seq_item_def.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"])
 
 def get_seq_item_assign(cvx_if_present: bool) -> str:
     if cvx_if_present:
-        return rvfi_seq_item_assign + cvx_seq_item_assign
+        return rvfi_seq_item_assign.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"]) + cvx_seq_item_assign.format(indent=concat_indent(1))
     else:
-        return rvfi_seq_item_assign
-
-#Class template to be formatted
-template_content = """
-`ifndef __{class_name}_SV__
-`define __{class_name}_SV__
-
-import uvmc_rvfi_decoder_pkg::*;
-import uvma_rvfi_pkg::*;
-
-class {class_name} extends {main_class};
-
-    string {path_name} = "";
-    int mem[int];
-    int incr;
-    int order = 0;
-
-    virtual uvma_clknrst_if clknrst_vif;
-    virtual uvma_interrupt_if interrupt_vif;
-    uvma_rvfi_mode mode = 3;
-
-    {fields_variables}
-    //Added by hand (not present in arg_lut.csv)
-    bit [31:0] instruction;
-    bit [31:0] reg_file[31:0];
-    bit [31:0] csr_reg_file[4095:0];
-    bit [11:0] imms;
-    bit [12:0] immsb; 
-    bit [31:0] immuj; 
-    bit [31:0] pc; 
-    bit [63:0] reg_mul;
-    bit [31:0] imm12_ext;
-    bit [31:0] imms_ext;
-    bit [31:0] immsb_ext;
-    bit [31:0] pc_before;
-    bit [31:0] c_imm_ext;
-    bit [31:0] addr;
-    bit [31:0] reg_rs1_prev;
-    bit [31:0] reg_rs2_prev;
-    bit [31:0] reg_rs3_prev;
-    bit [31:0] rs2_masked;
-    bit [31:0] imm6_ext;
-    bit [31:0] reg_result;
-    bit iteration_mx = 0;
-    bit [15:0] reg_mac_mul_prov;
-    bit [31:0] lpstart[1:0];
-    bit [31:0] lpend[1:0];
-    bit [31:0] lpcount[1:0];
-    bit is_cv_instr;
-    static bit [31:0] MIP_MASK = 32'h0000_0888;
-    bit take_nmi;         
-    bit mie_global;
-    logic [31:0] pend;
-    logic [31:0] pend_now;
-    logic [31:0] base;
-    int cause;
-    bit trap_armed;
-    int trap_cause_latched;
-    int next_cause = -1;
-
-
-    {seq_item_def}
-    `uvm_component_utils_begin({class_name})
-    `uvm_component_utils_end
-
-    function new(string name="{class_name}", uvm_component parent={parent});
-
-        super.new(name, parent);
-
-        $display("[%0t]Creating {class_name} instance: %s", $time, name);
-
-	    if ($value$plusargs("firmware=%s", {path_name})) begin
-            $display("Firmware file: %s", {path_name});
-        end else begin
-            $fatal("No +firmware argument provided!");
-    	end
-
-        $readmemh({path_name}, mem);
-
-        csr_reg_file[12'hF11] = 32'h00000602; // mvendorid
-        csr_reg_file[12'h301] = 32'h40101104; // misa (RV32IMCU)
-        csr_reg_file[12'hF12] = 32'h00000023; // marchid
-        csr_reg_file[12'hF13] = 32'h00000000; // mimpid
-        csr_reg_file[12'h300] = 32'h00001800; // mstatus
-        csr_reg_file[12'h344] = 32'h00000000; // mip
-
-    endfunction : new
-
-    function void build_phase(uvm_phase phase);
-        st_core_cntrl_cfg st;
-
-        super.build_phase(phase);
-
-        st = cfg.to_struct();
-
-        if (st.boot_addr_valid) begin
-            pc = st.boot_addr;
-            `uvm_info("BOOT_ADDR", $sformatf("Boot_addr: %0h", st.boot_addr), UVM_MEDIUM)
-        end else begin
-            `uvm_fatal("BOOT_ADDR not valid, using default value", UVM_MEDIUM)
-        end
-        if (!uvm_config_db#(virtual uvma_interrupt_if)::get(
-            null, "*.env", "intr_vif", interrupt_vif)) begin
-            `uvm_fatal("NOINT", "Cannot get interrupt_vif from config_db")
-        end
-
-        {constructor_code}
-    endfunction : build_phase
-
-    {step_code}
-    {run_phase_code}
-
-    function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) decode_opcode(bit[{instr_width}-1:0] instr);
-
-        {seq_item_assign}
-
-        rvfi_instr_seq_item.mode = mode;
-
-        
-        take_nmi         = interrupt_vif.irq[0];         // NMI ignora mstatus/mie
-        mie_global       = csr_reg_file[12'h300][3];      // mstatus.MIE
-
-        pend    = csr_reg_file[12'h344] & csr_reg_file[12'h304];
-
-        incr = 4;
-
-        csr_reg_file[12'h344] = (csr_reg_file[12'h344] & ~MIP_MASK)
-                | (interrupt_vif.irq & MIP_MASK);
-
-
-        is_cv_instr = 1'b0;
-
-        rs1 = 5'b0;
-        rs2 = 5'b0;
-        rd  = 5'b0;
-
-        
-        csr_reg_file[12'h344][3]  = interrupt_vif.irq[3];    // MSIP
-        csr_reg_file[12'h344][7]  = interrupt_vif.irq[7];    // MTIP
-        csr_reg_file[12'h344][11] = interrupt_vif.irq[11];   // MEIP
-        for (int i = 16; i <= 30; i++) begin
-            csr_reg_file[12'h344][i] = interrupt_vif.irq[i];   // fast[14:0]
-        end
-
-
-
-    if (trap_armed) begin
-        base  = csr_reg_file[12'h305] & 32'hFFFF_FFFC;
-
-        csr_reg_file[12'h341]        = pc;                               // mepc = next PC
-        csr_reg_file[12'h342]        = {{1'b1, trap_cause_latched[30:0]}}; // mcause[31]=1
-        $display("dio del dio %h", csr_reg_file[12'h342]);
-        csr_reg_file[12'h343]        = '0;                               // mtval=0
-        csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];         // MPIE <- MIE
-        csr_reg_file[12'h300][3]     = 1'b0;                             // MIE  <- 0
-        csr_reg_file[12'h300][12:11] = 2'b11;                            // MPP  <- M
-
-        pc = base + (trap_cause_latched << 2); // vectored per gli IRQ
-        $display("pc: %h", pc);
-        instr = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
-        trap_armed = 1'b0;
-    end
-
-            pc_before = pc;
-
-
-
-        //pend_now = csr_reg_file[12'h344] & csr_reg_file[12'h304];
-
-        // PATCH #3: detect & take interrupt (vectored), poi refetch al vettore
-
-
-
-//if (interrupt_vif.irq[31]) begin
-  //trap_armed         = 1'b1;
-  //trap_cause_latched = 31;     // NMI
-//end
-//else if (!trap_armed && mie_global) begin
-  //int c = -1;
-  //// priorità fast: ID più basso prima
-  //for (int i = 16; i <= 31; i++) if (pend[i]) begin c = i; break; end
-  //if (c == -1 && pend[11]) c = 11; // MEIP
-  //else if (c == -1 && pend[7])  c = 7;  // MTIP
-  //else if (c == -1 && pend[3])  c = 3;  // MSIP
-
-  //if (c != -1) begin
-    //trap_armed         = 1'b1;
-    //trap_cause_latched = c;
-  //end
-//end
-
-//if (cause != -1) begin
-  //logic [31:0] mtvec = csr_reg_file[12'h305];
-  //logic [31:0] base  = mtvec & 32'hFFFF_FFFC;        // BASE (mode in [1:0])
-
-  // Salva CSRs d’ingresso trap
-  //csr_reg_file[12'h341]        = pc_before;          // mepc
-  //csr_reg_file[12'h342]        = {{1'b1, cause[30:0]}};// mcause[31]=1 (interrupt)
-  //csr_reg_file[12'h343]        = '0;                 // mtval=0
-
-  // mstatus: MPIE<-MIE; MIE<-0; MPP<-M
-  //csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];
-  //csr_reg_file[12'h300][3]     = 1'b0;
-  //csr_reg_file[12'h300][12:11] = 2'b11;
-
-  // Vectored: PC = BASE + 4*cause (CVE2 fa vectored per gli interrupt)
-  //pc    = base + (cause << 2);
-  //incr  = 0;
-
-  // Refetch subito l'istruzione al vettore (es. JAL x0, handler)
-  //instr     = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
-  //pc_before = pc;
-//end
-
-    {casez_string}
-
-        reg_file[0] = 32'b0;
-
-        pc += incr;
-
-        {rvfi_block}
-
-                        if (interrupt_vif.irq_ack && !interrupt_vif.irq[0]) begin
-
-
-
-        // --- IRQ maskabile
-        int c = -1;
-        $display("I'M INSIDE THE IRQ_ACK, I'M TAKEN AN IRQ");
-        $display("MIE_global: %0b", mie_global);
-        //if (mie_global) begin
-            for (int i = 16; i <= 30; i++) if (pend[i]) begin c = i; break; end
-            if (c == -1 && pend[11]) c = 11;
-            else if (c == -1 && pend[7])  c = 7;
-            else if (c == -1 && pend[3])  c = 3;
-            $display("c: %0d", c);
-    //end
-    if (c != -1) begin
-        trap_armed         = 1'b1;
-        trap_cause_latched = c;
-    end
-    end
-
-                        if (interrupt_vif.irq_ack) begin
-    if (interrupt_vif.irq[0]) begin
-        $display("[%0t] REF NMI taken: pc=%08h -> vector", $time, pc_before);
-        base = csr_reg_file[12'h305] & 32'hFFFF_FFFC;
-
-        // Save CSRs trap (NMI indipendente da MIE/mie)
-        // mepc = PC of interrupted instruction
-        csr_reg_file[12'h341]        = pc;
-        csr_reg_file[12'h342]        = {{1'b1, 31'd32}};
-        csr_reg_file[12'h343]        = '0;           // mtval = 0
-        csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3]; // MPIE <- MIE
-        csr_reg_file[12'h300][3]     = 1'b0;                     // MIE  <- 0
-        csr_reg_file[12'h300][12:11] = 2'b11;                    // MPP  <- M
-
-        pc         = csr_reg_file[12'h305] + 127;
-        incr       = 0;                        
-        instr = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
-        pc_before   = pc;                       
-
-    end
-    end
-
-        return rvfi_instr_seq_item;
-
-    endfunction : decode_opcode
-
-
-endclass : {class_name}
-
-`endif // __{class_name}_SV__
-"""
+        return rvfi_seq_item_assign.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"])
 
 #Formatting the template with the extracted parameters
 casez_fmt = get_if_else_statement_fmt(length=len(opcode_dict)-1, case_format=True, always_comb=False)
@@ -653,7 +260,7 @@ casez_fmt = get_if_else_statement_fmt(length=len(opcode_dict)-1, case_format=Tru
 casez_string = casez_fmt.format(
     indent="        ",
     val="instr",
-    default_assign= f"begin\n\n{INDENT_THREE}{INDENT_ONE}`uvm_error(\"UNKNOWN\", \"Unknown instruction detected\")\n{INDENT_THREE}{INDENT_ONE}incr = 4;\n\n{INDENT_THREE}end\n",
+    default_assign= f"begin\n\n{concat_indent(4)}`uvm_error(\"UNKNOWN\", \"Unknown instruction detected\")\n{concat_indent(4)}incr = 4;\n\n{concat_indent(3)}end\n",
     **casez_dict,
 )
 
@@ -664,7 +271,10 @@ file_content = template_content.format(casez_string=casez_string,**values,
                                        step_code=step_code, 
                                        rvfi_block=get_rvfi_block(args.instantiate_cvxif), 
                                        seq_item_def=get_seq_item_def(args.instantiate_cvxif), 
-                                       seq_item_assign=get_seq_item_assign(args.instantiate_cvxif))
+                                       seq_item_assign=get_seq_item_assign(args.instantiate_cvxif),
+                                       additional_regs=additional_regs,
+                                       uvm_verbosity=config["uvm_verbosity"]
+                                       )
 
 
 
