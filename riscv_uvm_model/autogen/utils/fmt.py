@@ -1,3 +1,51 @@
+clock_code = """
+    task run_phase(uvm_phase phase);
+
+        super.run_phase(phase);
+
+        if (!uvm_config_db#(virtual uvma_clknrst_if)::get(null, "*.env.clknrst_agent", "vif", clknrst_vif)) begin
+            `uvm_fatal("NOCLOCK", "Cannot get clknrst_vif from config_db")
+        end
+
+        fork
+            begin : fetch_decode
+                forever begin
+                    @(posedge clknrst_vif.clk);
+
+                    if (!clknrst_vif.reset_n) begin
+                        pc = 0;
+                    end else begin
+                        instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
+                        pc = decode_opcode(instruction, pc);
+                        m_analysis_port.write(rvfi_instr_seq_item);
+                    end
+                end
+            end
+        join_none
+    endtask
+"""
+while_code = """
+        while (pc != 32'h80000288) begin
+            instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
+            pc = decode_opcode(instruction, pc);
+            m_analysis_port.write(rvfi_instr_seq_item);
+        end
+"""
+dummy_step_code = """
+    function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) step (int i, uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
+        `uvm_info(get_type_name(), "Dummy step function called", {uvm_verbosity})
+    endfunction 
+"""
+step_code = """
+    function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) step (int i, uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
+        uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model_prov;
+        instruction = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
+        t_reference_model_prov = decode_opcode(instruction);
+        `uvm_info(get_type_name(), "Step function called", {uvm_verbosity})
+        return t_reference_model_prov;
+    endfunction
+"""
+
 rvfi_block = """
 {indent}rvfi_instr_seq_item.order     = order++;
 {indent}rvfi_instr_seq_item.insn      = instr;
@@ -80,10 +128,10 @@ class {class_name} extends {main_class};
 
         super.new(name, parent);
 
-        `uvm_info("[{class_name}]", $sformatf("[%0t]Creating {class_name} instance: %s", $time, name), {uvm_verbosity});
+        `uvm_info(get_full_name(), $sformatf("[%0t]Creating {class_name} instance: %s", $time, name), {uvm_verbosity});
 
 	    if ($value$plusargs("firmware=%s", {path_name})) begin
-            `uvm_info("[{class_name}]", $sformatf("Firmware file: %s", {path_name}), {uvm_verbosity});
+            `uvm_info(get_full_name(), $sformatf("Firmware file: %s", {path_name}), {uvm_verbosity});
         end else begin
             $fatal("No +firmware argument provided!");
     	end
@@ -108,13 +156,13 @@ class {class_name} extends {main_class};
 
         if (st.boot_addr_valid) begin
             pc = st.boot_addr;
-            `uvm_info("BOOT_ADDR", $sformatf("Boot_addr: %0h", st.boot_addr), UVM_MEDIUM)
+            `uvm_info(get_full_name(), $sformatf("Boot_addr: %0h", st.boot_addr), UVM_MEDIUM)
         end else begin
-            `uvm_fatal("BOOT_ADDR not valid, using default value", UVM_MEDIUM)
+            `uvm_fatal(get_full_name(), "BOOT_ADDR not valid, using default value")
         end
         if (!uvm_config_db#(virtual uvma_interrupt_if)::get(
             null, "*.env", "intr_vif", interrupt_vif)) begin
-            `uvm_fatal("NOINT", "Cannot get interrupt_vif from config_db")
+            `uvm_fatal(get_full_name(), "Cannot get interrupt_vif from config_db")
         end
 
         {constructor_code}
@@ -125,15 +173,15 @@ class {class_name} extends {main_class};
 
     function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) decode_opcode(bit[{instr_width}-1:0] instr);
 
-        {seq_item_assign}
+{seq_item_assign}
 
         rvfi_instr_seq_item.mode = mode;
 
         
-        take_nmi         = interrupt_vif.irq[0];         // NMI ignora mstatus/mie
-        mie_global       = csr_reg_file[12'h300][3];      // mstatus.MIE
+        take_nmi = interrupt_vif.irq[0];         // NMI ignora mstatus/mie
+        mie_global = csr_reg_file[12'h300][3];      // mstatus.MIE
 
-        pend    = csr_reg_file[12'h344] & csr_reg_file[12'h304];
+        pend = csr_reg_file[12'h344] & csr_reg_file[12'h304];
 
         incr = 4;
 
@@ -157,73 +205,24 @@ class {class_name} extends {main_class};
 
 
 
-    if (trap_armed) begin
-        base  = csr_reg_file[12'h305] & 32'hFFFF_FFFC;
+        if (trap_armed) begin
+            base  = csr_reg_file[12'h305] & 32'hFFFF_FFFC;
 
-        csr_reg_file[12'h341]        = pc;                               // mepc = next PC
-        csr_reg_file[12'h342]        = {{1'b1, trap_cause_latched[30:0]}}; // mcause[31]=1
-        csr_reg_file[12'h343]        = '0;                               // mtval=0
-        csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];         // MPIE <- MIE
-        csr_reg_file[12'h300][3]     = 1'b0;                             // MIE  <- 0
-        csr_reg_file[12'h300][12:11] = 2'b11;                            // MPP  <- M
+            csr_reg_file[12'h341]        = pc;                               // mepc = next PC
+            csr_reg_file[12'h342]        = {{1'b1, trap_cause_latched[30:0]}}; // mcause[31]=1
+            csr_reg_file[12'h343]        = '0;                               // mtval=0
+            csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];         // MPIE <- MIE
+            csr_reg_file[12'h300][3]     = 1'b0;                             // MIE  <- 0
+            csr_reg_file[12'h300][12:11] = 2'b11;                            // MPP  <- M
 
-        pc = base + (trap_cause_latched << 2); // vectored per gli IRQ
-        instr = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
-        trap_armed = 1'b0;
-    end
+            pc = base + (trap_cause_latched << 2); // vectored per gli IRQ
+            instr = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
+            trap_armed = 1'b0;
+        end
 
-            pc_before = pc;
+        pc_before = pc;
 
-
-
-        //pend_now = csr_reg_file[12'h344] & csr_reg_file[12'h304];
-
-        // PATCH #3: detect & take interrupt (vectored), poi refetch al vettore
-
-
-
-//if (interrupt_vif.irq[31]) begin
-  //trap_armed         = 1'b1;
-  //trap_cause_latched = 31;     // NMI
-//end
-//else if (!trap_armed && mie_global) begin
-  //int c = -1;
-  //// priorità fast: ID più basso prima
-  //for (int i = 16; i <= 31; i++) if (pend[i]) begin c = i; break; end
-  //if (c == -1 && pend[11]) c = 11; // MEIP
-  //else if (c == -1 && pend[7])  c = 7;  // MTIP
-  //else if (c == -1 && pend[3])  c = 3;  // MSIP
-
-  //if (c != -1) begin
-    //trap_armed         = 1'b1;
-    //trap_cause_latched = c;
-  //end
-//end
-
-//if (cause != -1) begin
-  //logic [31:0] mtvec = csr_reg_file[12'h305];
-  //logic [31:0] base  = mtvec & 32'hFFFF_FFFC;        // BASE (mode in [1:0])
-
-  // Salva CSRs d’ingresso trap
-  //csr_reg_file[12'h341]        = pc_before;          // mepc
-  //csr_reg_file[12'h342]        = {{1'b1, cause[30:0]}};// mcause[31]=1 (interrupt)
-  //csr_reg_file[12'h343]        = '0;                 // mtval=0
-
-  // mstatus: MPIE<-MIE; MIE<-0; MPP<-M
-  //csr_reg_file[12'h300][7]     = csr_reg_file[12'h300][3];
-  //csr_reg_file[12'h300][3]     = 1'b0;
-  //csr_reg_file[12'h300][12:11] = 2'b11;
-
-  // Vectored: PC = BASE + 4*cause (CVE2 fa vectored per gli interrupt)
-  //pc    = base + (cause << 2);
-  //incr  = 0;
-
-  // Refetch subito l'istruzione al vettore (es. JAL x0, handler)
-  //instr     = {{mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]}};
-  //pc_before = pc;
-//end
-
-    {casez_string}
+{casez_string}
 
         reg_file[0] = 32'b0;
 

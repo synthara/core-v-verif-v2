@@ -128,7 +128,7 @@ for instruction, impls in impl_dict.items():
 # Filling the casez_dict which will contain all the datas to be put in the case
 for i, (key, val) in enumerate(opcode_dict.items()):
     casez_dict[f"condition{i}"] = f"{key}"
-    casez_dict[f"assign{i}"]    = f'`uvm_info("{key}", \"Instruction {key} detected successfully\", {config["uvm_verbosity"]})\n\n\n\n'
+    casez_dict[f"assign{i}"]    = f'`uvm_info("{key}", \"Instruction {key} detected successfully\", {config["uvm_verbosity"]})\n'
     for j, (instr, fields) in enumerate(only_variable_fields.items()):
         if(key.lower() == instr.lower()):
             #fmt_name = instruction_formats[instr]
@@ -143,93 +143,24 @@ for i, (key, val) in enumerate(opcode_dict.items()):
             if instr.lower() in implementations_dict.keys():
                 for line in implementations_dict[instr.lower()]:
                     indentation = concat_indent(line["indent"], "\t")
-                    casez_dict[f"assign{i}"] += f"{indentation}{line['str']}\n"
+                    casez_dict[f"assign{i}"] += f"{indentation}{line['str'].replace('UVM_MEDIUM', config['uvm_verbosity'])}\n"
 
-#Reordering the casez_dict based on the priority list
+# Reordering the casez_dict based on the priority list
 casez_dict = reorder_casez_dict(casez_dict, priority_list)
 
-#this block manages the cases in which there is the clock or not
+# This block manages the cases in which there is the clock or not
 if mode == "clock":
-    clock_code = """
-    task run_phase(uvm_phase phase);
-
-        super.run_phase(phase);
-
-        if (!uvm_config_db#(virtual uvma_clknrst_if)::get(null, "*.env.clknrst_agent", "vif", clknrst_vif)) begin
-            `uvm_fatal("NOCLOCK", "Cannot get clknrst_vif from config_db")
-        end
-
-        fork
-            begin : fetch_decode
-                forever begin
-                    @(posedge clknrst_vif.clk);
-
-                    if (!clknrst_vif.reset_n) begin
-                        pc = 0;
-                    end else begin
-                        instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
-                        pc = decode_opcode(instruction, pc);
-                        m_analysis_port.write(rvfi_instr_seq_item);
-                    end
-                end
-            end
-        join_none
-    endtask
-"""
+    clock_code = clock_code
     while_code = ""  # Void: I'm not writing anything inside the constructor
-    step_code = """
-    function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) step (int i, uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        //instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
-        //pc = decode_opcode(instruction, pc);
-        //`uvm_info(get_type_name(), "Dummy step function called", UVM_MEDIUM)
-    endfunction 
-
-    function void write_rvfi_instr(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        //uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model = step(1, t);
-        //m_analysis_port.write(t);
-        //`uvm_info(get_type_name(), "Dummy write_rvfi_instr function called", UVM_MEDIUM)
-    endfunction : write_rvfi_instr
-"""
+    step_code = dummy_step_code.format(**config)
 elif mode == "while":
     clock_code = ""    # Void: I'm not writing anything inside the run_phase
-    while_code = """
-        while (pc != 32'h80000288) begin
-            instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
-            pc = decode_opcode(instruction, pc);
-            m_analysis_port.write(rvfi_instr_seq_item);
-        end
-"""
-    step_code = """
-    function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) step (int i, uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        //instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
-        //pc = decode_opcode(instruction, pc);
-        //`uvm_info(get_type_name(), "Dummy step function called", UVM_MEDIUM)
-    endfunction 
-
-    function void write_rvfi_instr(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        //uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model = step(1, t);
-        //m_analysis_port.write(t);
-        //`uvm_info(get_type_name(), "Dummy write_rvfi_instr function called", UVM_MEDIUM)
-    endfunction : write_rvfi_instr
-"""
+    while_code = while_code
+    step_code = dummy_step_code.format(**config)
 else:
     clock_code = ""    # Void: I'm not writing anything inside the run_phase
     while_code = ""    # Void: I'm not writing anything inside the run_phase
-    step_code = """
-    function uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) step (int i, uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model_prov;
-        instruction = {mem[pc+3][7:0], mem[pc+2][7:0], mem[pc+1][7:0], mem[pc][7:0]};
-        t_reference_model_prov = decode_opcode(instruction);
-        `uvm_info(get_type_name(), "Dummy step function called", UVM_MEDIUM)
-        return t_reference_model_prov;
-    endfunction 
-
-    //function void write_rvfi_instr(uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t);
-        //uvma_rvfi_instr_seq_item_c#(ILEN,XLEN) t_reference_model = step(1, t);
-        //m_analysis_port.write(t_reference_model);
-        //`uvm_info(get_type_name(), "Dummy write_rvfi_instr function called", UVM_MEDIUM)
-    //endfunction : write_rvfi_instr
-"""
+    step_code = step_code.format(**config)
 
 additional_regs = "".join(
     f"{reg['type']} {reg['name'].format(**config)};\n{concat_indent(1)}"
@@ -237,28 +168,29 @@ additional_regs = "".join(
 )
 
 def get_rvfi_block(cvx_if_present: bool) -> str:
+    str_list = [rvfi_block.format(indent=concat_indent(2))]
     if cvx_if_present:
-        return rvfi_block.format(indent=concat_indent(2)) + cvx_block.format(indent=concat_indent(2), INDENT_ONE=INDENT_ONE)
-    else:
-        return rvfi_block.format(indent=concat_indent(2))
+        str_list.append(cvx_block.format(indent=concat_indent(2), INDENT_ONE=INDENT_ONE))
+    return "\n".join(str_list)
+
 
 def get_seq_item_def(cvx_if_present: bool) -> str:
+    str_list = [rvfi_seq_item_def.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"])]
     if cvx_if_present:
-        return rvfi_seq_item_def.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"]) + cvx_seq_item_def.format(indent=concat_indent(1))
-    else:
-        return rvfi_seq_item_def.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"])
+        str_list.append(cvx_seq_item_def.format(indent=concat_indent(1)))
+    return "\n".join(str_list)
 
 def get_seq_item_assign(cvx_if_present: bool) -> str:
+    str_list = [rvfi_seq_item_assign.format(indent=concat_indent(2), ilen=config["instr_width"], xlen=config["data_width"])]
     if cvx_if_present:
-        return rvfi_seq_item_assign.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"]) + cvx_seq_item_assign.format(indent=concat_indent(1))
-    else:
-        return rvfi_seq_item_assign.format(indent=concat_indent(1), ilen=config["instr_width"], xlen=config["data_width"])
+        str_list.append(cvx_seq_item_assign.format(indent=concat_indent(2)))
+    return "\n".join(str_list)
 
 #Formatting the template with the extracted parameters
 casez_fmt = get_if_else_statement_fmt(length=len(opcode_dict)-1, case_format=True, always_comb=False)
     
 casez_string = casez_fmt.format(
-    indent="        ",
+    indent=concat_indent(2),
     val="instr",
     default_assign= f"begin\n\n{concat_indent(4)}`uvm_error(\"UNKNOWN\", \"Unknown instruction detected\")\n{concat_indent(4)}incr = 4;\n\n{concat_indent(3)}end\n",
     **casez_dict,
