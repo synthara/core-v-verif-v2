@@ -10,12 +10,12 @@
     "uvm_verbosity": "UVM_DEBUG",
     "ext_supported": ["rv_i", "rv_c", "rv_m", "rv32_c", "rv32_i", "rv_zicsr", "unratified/rv_addsub", "unratified/rv_addsubls3", "unratified/rv_clip", "unratified/rv_cmpsimd", "rv_system", "unratified/rv_dotpsimd", "unratified/rv_gen_alu", "unratified/rv_gensimd", "unratified/rv_mac32", "unratified/rv_mac168", "unratified/rv_mul168", "unratified/rv_postinc_load_store"],
     "csr_reg": [
-        {"name": "mvendorid", "address": "0xF11", "default_val": "0x602"},
-        {"name": "misa", "address": "0x301", "default_val": "0x40101104"},
-        {"name": "marchid", "address": "0xF12", "default_val": "0x23"},
-        {"name": "mimpid", "address": "0xF13", "default_val": "0x0"},
-        {"name": "mstatus", "address": "0x300", "default_val": "0x1800"},
-        {"name": "mip", "address": "0x344", "default_val": "0x0"}
+        {"name": "mvendorid", "default_val": "0x602"},
+        {"name": "misa", "default_val": "0x40101104"},
+        {"name": "marchid", "default_val": "0x23"},
+        {"name": "mimpid", "default_val": "0x0"},
+        {"name": "mstatus", "default_val": "0x1800"},
+        {"name": "mip", "default_val": "0x0"}
     ],
     "additional_regs": [
         {"type": "bit [ILEN-1:0]", "name": "instruction"},

@@ -92,7 +92,7 @@ values = {
 }
 
 csr_reg_init = "".join(
-    f"{concat_indent(2)}csr_reg_file[{hex2sv(reg['address'], ceil_log2(config['csr_num_regs']))}] = {hex2sv(reg['default_val'], config['data_width'])}; // {reg['name']}\n"
+    f"{concat_indent(2)}csr_reg_file[CSR_{reg['name'].upper()}] = {hex2sv(reg['default_val'], config['data_width'])}; // {reg['name']}\n"
     for reg in config.get("csr_reg", [])
     if "default_val" in reg
 )
