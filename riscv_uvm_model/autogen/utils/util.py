@@ -1,5 +1,30 @@
+import math
+
 # Global variables to make an indentation when needed
 INDENT_ONE = "    "
+
+def ceil_log2(x):
+    if type(x) == str:
+        x = int(x)
+    return math.ceil(math.log2(x))
+
+def hex2sv(hex_string: str, sv_size: int = 32) -> str:
+    """
+    Converts a hexadecimal string to SystemVerilog format with specified size.
+
+    Args:
+        hex_string (str): The hexadecimal string to convert (e.g., "0x1A3F").
+        sv_size (int, optional): The size in bits for the SystemVerilog representation. Defaults to 32.
+
+    Returns:
+
+        str: The SystemVerilog formatted string (e.g., "32'h1A3F").
+    """
+    # Remove the '0x' prefix if present
+    if hex_string.startswith("0x") or hex_string.startswith("0X"):
+        hex_string = hex_string[2:]
+
+    return f"{sv_size}'h{hex_string}"
 
 def concat_indent(times: int, base_indent: str=INDENT_ONE) -> str:
     """

@@ -91,6 +91,11 @@ values = {
     "path_name": config["path_name"],
 }
 
+csr_reg_init = "".join(
+    f"{concat_indent(2)}csr_reg_file[{hex2sv(reg['address'], ceil_log2(config['csr_num_regs']))}] = {hex2sv(reg['default_val'], config['data_width'])}; // {reg['name']}\n"
+    for reg in config.get("csr_reg", [])
+    if "default_val" in reg
+)
 
 #Extracting the field names and sizes from the field_specs dictionary
 field_block = "".join(
@@ -186,7 +191,7 @@ def get_seq_item_assign(cvx_if_present: bool) -> str:
         str_list.append(cvx_seq_item_assign.format(indent=concat_indent(2)))
     return "\n".join(str_list)
 
-#Formatting the template with the extracted parameters
+# Formatting the template with the extracted parameters
 casez_fmt = get_if_else_statement_fmt(length=len(opcode_dict)-1, case_format=True, always_comb=False)
     
 casez_string = casez_fmt.format(
@@ -196,7 +201,8 @@ casez_string = casez_fmt.format(
     **casez_dict,
 )
 
-file_content = template_content.format(casez_string=casez_string,**values, 
+file_content = template_content.format(csr_reg_init=csr_reg_init,
+                                       casez_string=casez_string,**values, 
                                        fields_variables=field_block, 
                                        constructor_code=while_code, 
                                        run_phase_code=clock_code, 
