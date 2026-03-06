@@ -1,0 +1,10 @@
+# Format:
+# allowed_toolchains:
+#   - <absolute path to toolchain prefix ending with '-'>
+# Example entry:
+#   /opt/.../bin/riscv32-unknown-elf-
+allowed_toolchains:
+  - /mnt/rhea_hdd_raid5/opt_non_storage/backend/toolchains/risc/rv32im/bin/riscv32-unknown-elf-
+  - /mnt/rhea_hdd_raid5/opt_non_storage/backend/toolchains/risc/rv32imc/bin/riscv32-unknown-elf-
+  - /mnt/rhea_hdd_raid5/opt_non_storage/backend/toolchains/risc/rv32imcb/bin/riscv32-unknown-elf-
+  - /opt/eda/riscv/tools/corev-openhw-gcc-rocky8-20240530/bin/riscv32-corev-elf-

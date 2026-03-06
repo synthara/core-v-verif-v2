@@ -5,6 +5,8 @@ import argparse
 import shutil
 import subprocess
 import json
+import yaml
+from compileSpike import main as compile_spike_main
 
 # Commit on branch feature/fdm_dev_tristan
 RTL_COP_COMMIT = "e5e7c6e82e8e6d6b46e4f5ae61e2a1331e41d607"
@@ -35,18 +37,32 @@ allowed_marches = [
     "rv32imc_zicsr_xcvalu_xcvsimd_xcvmac_xcvmem",
 ]
 
-allowed_toolchains = [
-    "/mnt/rhea_hdd_raid5/opt_non_storage/backend/toolchains/risc/rv32im/bin/riscv32-unknown-elf-",
-    "/mnt/rhea_hdd_raid5/opt_non_storage/backend/toolchains/risc/rv32imc/bin/riscv32-unknown-elf-",
-    "/mnt/rhea_hdd_raid5/opt_non_storage/backend/toolchains/risc/rv32imcb/bin/riscv32-unknown-elf-",
-    "/home/vcl/compiler/riscv-toolchain/riscv-gnu-toolchain/riscv/bin/riscv32-unknown-elf-",
-    "/opt/eda/riscv/tools/corev-openhw-gcc-rocky8-20240530/bin/riscv32-corev-elf-"
-]
+TOOLCHAIN_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "toolchain.yml"
+
+def load_allowed_toolchains(config_path: Path) -> list[str]:
+    if not config_path.exists():
+        raise RuntimeError(f"Toolchain config file not found: {config_path}")
+
+    with config_path.open("r", encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+
+    allowed = data.get("allowed_toolchains", [])
+    if not isinstance(allowed, list):
+        raise RuntimeError("allowed_toolchains must be a list in toolchain.yml")
+
+    allowed = [toolchain for toolchain in allowed if isinstance(toolchain, str) and toolchain.strip()]
+    if not allowed:
+        raise RuntimeError(f"No toolchains configured in {config_path}")
+
+    return allowed
+
+
+allowed_toolchains = load_allowed_toolchains(TOOLCHAIN_CONFIG_PATH)
 
 # Argparse the input in search of the flag -gui
 parser = argparse.ArgumentParser()
 parser.add_argument("-asf", help="ASF flag (accepts a string)", default="", type=str)
-parser.add_argument("-out_dir", help="Output directory for the simulation results", default=os.path.join(os.path.dirname(os.path.realpath(__file__)), "log"))
+parser.add_argument("-out_dir", help="Output directory for the simulation results", default=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))), "log"))
 parser.add_argument("-gui", help="Run the simulation in GUI mode", action="store_true")
 parser.add_argument("-test_idx", help="Specify the test index (integer)", type=int, default=0)
 parser.add_argument("-cop", help="Compile the coprocessor as well", action="store_true")
@@ -100,7 +116,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Get path to the current directory
-    CORE_V_VERIF = os.path.dirname(os.path.realpath(__file__))
+    CORE_V_VERIF = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
     os.environ["CORE_V_VERIF"] = CORE_V_VERIF
 
     RISCV_UVM_MODEL_DIR = os.path.join(CORE_V_VERIF, "riscv_uvm_model")
@@ -423,8 +439,6 @@ if __name__ == "__main__":
 
     sv_sim_cmd = fmt.sv_sim_cmd.format(**fmt_dict)
     
-    build_folder_cmd = fmt.build_folder_cmd.format(**fmt_dict)
-    
     rtl_git_cmd = fmt.rtl_git_cmd.format(**fmt_dict)
     
     tb_git_cmd = fmt.tb_git_cmd.format(**fmt_dict)
@@ -482,7 +496,10 @@ if __name__ == "__main__":
     # If the folder has not been built, this command is added at the beginning of the sw_cmd_dict
     # in order to build the folder before compiling the SW. The verilab folder will be filled with Spike files
     if not os.path.exists(VERILAB_DIR):
-        cmd_dict = {"build_folder_cmd": build_folder_cmd, **cmd_dict}
+        spike_rc = compile_spike_main([])
+        if spike_rc != 0:
+            print("\033[91m" + "Error occurred in compileSpike. Exiting..." + "\033[0m")
+            exit()
 
     for cmd_idx, (key, cmd) in enumerate(cmd_dict.items()):
         print("\n**********************************************************")

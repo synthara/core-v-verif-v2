@@ -67,10 +67,6 @@ cd /home/vcl/Desktop/workspace/riscv/D-RVM-RiscVModel/cv32e20/sim/uvmt/vcs_resul
     +no_csr_instr=1
 """
 
-build_folder_cmd = """
-cd {CORE_TB_PATH}/sim/uvmt; make corev-dv CV_CORE={cv_core} SIMULATOR=vcs; make comp CV_CORE={cv_core} SIMULATOR=vcs
-"""
-
 rtl_git_cmd = """
 git -C {CORE_RTL_PATH} checkout {rtl_commit}
 """
