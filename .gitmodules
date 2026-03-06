@@ -19,6 +19,3 @@
 [submodule "core-v-cores/cv32e20"]
 	path = core-v-cores/cv32e20
 	url = git@github.com:synthara/rv2.git
-[submodule "cv32e20/vendor_lib/verilab/svlib"]
-    path = cv32e20/vendor_lib/verilab/svlib
-    ignore = all
