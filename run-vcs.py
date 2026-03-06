@@ -482,7 +482,7 @@ if __name__ == "__main__":
     # If the folder has not been built, this command is added at the beginning of the sw_cmd_dict
     # in order to build the folder before compiling the SW. The verilab folder will be filled with Spike files
     if not os.path.exists(VERILAB_DIR):
-        sw_cmd_dict = {"build_folder_cmd": build_folder_cmd, **sw_cmd_dict}
+        cmd_dict = {"build_folder_cmd": build_folder_cmd, **cmd_dict}
 
     for cmd_idx, (key, cmd) in enumerate(cmd_dict.items()):
         print("\n**********************************************************")
